@@ -102,3 +102,12 @@ cargo build --release
     + Regex
     + Length
 * No disturbing banner displayed at execution init
+
+## Similar tools
+
+* [dirbuster](https://sourceforge.net/projects/dirbuster/)
+* [dirb](https://sourceforge.net/projects/dirb/)
+* [gobuster](https://github.com/OJ/gobuster)
+* [ffuzz](https://github.com/ffuf/ffuf)
+* [wfuzz](https://github.com/xmendez/wfuzz)
+
