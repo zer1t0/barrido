@@ -1,6 +1,7 @@
 [package]
 name = "barrido"
 version = "0.1.0"
+description = "Tool to discover paths in web applications"
 authors = ["Eloy zer1t0ps@protonmail.com"]
 edition = "2018"
 license = "AGPL-3.0"
