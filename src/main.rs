@@ -1,0 +1,164 @@
+mod arguments;
+pub mod discoverer;
+mod result_handler;
+mod result_saver;
+mod printer;
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+use ctrlc;
+
+use crossbeam_channel;
+
+use discoverer::http_client::HttpOptions;
+use discoverer::path_discoverer::*;
+use result_handler::ResultHandler;
+use printer::Printer;
+use result_saver::JsonResultSaver;
+use discoverer::verificator::*;
+use reqwest::Url;
+
+use arguments::*;
+
+fn main() {
+    env_logger::init();
+    let args = parse_args();
+
+    let wordlist = File::open(args.wordlist())
+        .expect("Error opening wordlist file");
+
+    let paths_reader = BufReader::new(wordlist);
+
+    let http_options: HttpOptions = args.clone().into();
+
+    let mut verificator: Verificator = match args.codes_verification() {
+        CodesVerification::ValidCodes(codes) => {
+            CodesVerificator::new(codes.clone())
+        }
+        CodesVerification::InvalidCodes(codes) => {
+            !CodesVerificator::new(codes.clone())
+        }
+    };
+
+
+    if let Some(invalid_regex) = args.regex_verification() {
+        verificator = verificator &
+            !RegexVerificator::new(invalid_regex.clone())
+    }
+
+    if let Some(size_verification) = args.size_verification() {
+        let size_verficator = match size_verification {
+            SizeVerification::RangeSize(min_size, max_size) => {
+                SizeVerificator::new(*min_size, *max_size)
+            },
+            SizeVerification::ExactValidSize(size) => {
+                SizeVerificator::new(*size, *size)
+            },
+            SizeVerification::ExactInvalidSize(size) => {
+                !SizeVerificator::new(*size, *size)
+            }
+        };
+        verificator = verificator & size_verficator;
+    }
+
+    let base_urls = parse_urls(args.urls());
+
+    let max_requests_count = get_file_lines(args.wordlist()) * base_urls.len();
+
+
+    let discoverer = PathDiscovererBuilder::new(
+        base_urls,
+        paths_reader
+    )
+    .requesters_count(args.threads())
+    .verificator(verificator)
+    .http_options(http_options)
+    .use_scraper(args.use_scraper())
+    .spawn();
+
+    let (
+        signal_sender, 
+        signal_receiver
+    ) = crossbeam_channel::unbounded::<()>();
+
+    spawn_signal_handler(signal_sender);
+
+    let printer = Printer::new(
+        args.verbosity(),
+        args.show_status(),
+        args.show_body_length(),
+        args.show_progress(),
+        args.expand_path(),
+    );
+
+    
+    let results = ResultHandler::start(
+        discoverer.result_receiver().clone(),
+        discoverer.end_receiver().clone(),
+        signal_receiver,
+        max_requests_count,
+        printer
+    );
+
+    if let Some(out_file_path) = args.out_file_json() {    
+        JsonResultSaver::save_results(&results, out_file_path);
+    }
+}
+
+
+
+fn spawn_signal_handler(
+    sender: crossbeam_channel::Sender<()>
+) {
+    ctrlc::set_handler(move || {
+        sender.send(())
+            .expect("SignalHandler: error sending signal");
+    }).unwrap();
+}
+
+fn get_file_lines<P: AsRef<Path>>(path: P) -> usize {
+    let file = File::open(path).unwrap();
+    let file_reader = BufReader::new(file);
+    return file_reader.lines().count();
+}
+
+fn parse_urls(urls: &str) -> Vec<Url> {
+    let mut base_urls = Vec::new();
+    match File::open(urls) {
+        Ok(urls_file) => {
+            let file_reader = BufReader::new(urls_file);
+            for line in file_reader.lines() {
+                let url_str = line.unwrap();
+                match Url::parse(&url_str) {
+                    Ok(url) => base_urls.push(url),
+                    Err(_) => {
+                        println!("[X] {} is not a valid URL", url_str);
+                        std::process::exit(-1);
+                    }
+                }
+            }
+        },
+        Err(_) => {
+            let mut url_str = urls.to_string();
+
+            if !url_str.ends_with("/") {
+                url_str.push('/');
+            }
+            if let Ok(base_url) = Url::parse(&url_str) {
+                base_urls.push(base_url);
+            }
+            else {
+                println!("[X] {} is not a valid URL", url_str);
+                std::process::exit(-1);
+            }
+
+        }
+    };
+    return base_urls;
+}
+
+
+
+
+

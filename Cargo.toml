@@ -1,0 +1,20 @@
+[package]
+name = "barrido"
+version = "0.1.0"
+authors = ["Eloy zer1t0ps@protonmail.com"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = "0.9"
+clap = "2.33"
+threadpool = "1.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ctrlc = { version = "3.1", features = ["termination"] }
+crossbeam-channel = "0.4"
+scraper = "0.11"
+regex = "1.3"
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_off"] }
+env_logger = "0.7"
