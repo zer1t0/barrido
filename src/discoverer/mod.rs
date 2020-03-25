@@ -1,7 +1,6 @@
 pub mod communication;
 mod end_checker;
 pub mod http_client;
-mod messages;
 pub mod path_discoverer;
 mod paths_provider;
 mod requester;

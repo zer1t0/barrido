@@ -1,14 +1,17 @@
-use super::response_info::ResponseInfo;
-use crossbeam_channel::*;
+use crate::discoverer::response_info::ResponseInfo;
+use crossbeam_channel::{Sender, Receiver, unbounded};
 use reqwest;
+use getset::Getters;
 
-pub struct ResultCommunicator {
+#[derive(Getters)]
+#[getset (get = "pub")]
+pub struct ResultChannel {
     sender: ResultSender,
     receiver: ResultReceiver,
 }
 
-impl ResultCommunicator {
-    pub fn new() -> Self {
+impl Default for ResultChannel {
+    fn default() -> Self {
         let (valid_response_sender, valid_response_receiver) =
             unbounded::<ResponseInfo>();
         let (invalid_response_sender, invalid_response_receiver) =
@@ -29,13 +32,6 @@ impl ResultCommunicator {
         return Self { sender, receiver };
     }
 
-    pub fn sender(&self) -> &ResultSender {
-        return &self.sender;
-    }
-
-    pub fn receiver(&self) -> &ResultReceiver {
-        return &self.receiver;
-    }
 }
 
 #[derive(Clone)]
@@ -77,7 +73,8 @@ impl ResultSender {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Getters)]
+#[getset (get = "pub")]
 pub struct ResultReceiver {
     valid_responses: Receiver<ResponseInfo>,
     invalid_responses: Receiver<ResponseInfo>,
@@ -95,37 +92,5 @@ impl ResultReceiver {
             invalid_responses,
             errors,
         };
-    }
-
-    pub fn valid_responses(&self) -> &Receiver<ResponseInfo> {
-        return &self.valid_responses;
-    }
-
-    pub fn invalid_responses(&self) -> &Receiver<ResponseInfo> {
-        return &self.invalid_responses;
-    }
-
-    pub fn errors(&self) -> &Receiver<reqwest::Error> {
-        return &self.errors;
-    }
-}
-
-pub struct EndCommunicator {
-    receiver: Receiver<()>,
-    sender: Sender<()>,
-}
-
-impl EndCommunicator {
-    pub fn new() -> Self {
-        let (sender, receiver) = unbounded::<()>();
-        return Self { sender, receiver };
-    }
-
-    pub fn sender(&self) -> &Sender<()> {
-        return &self.sender;
-    }
-
-    pub fn receiver(&self) -> &Receiver<()> {
-        return &self.receiver;
     }
 }

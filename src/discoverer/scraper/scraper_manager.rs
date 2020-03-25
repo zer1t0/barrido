@@ -1,8 +1,8 @@
-use super::super::messages::*;
-use super::super::response::*;
+use super::super::response::{Response, ContentType};
 use super::html_scraper::HtmlScraper;
 use super::javascript_scraper::JsScraper;
 use reqwest::Url;
+use crate::discoverer::communication::{UrlsMessage, UrlsSender};
 
 use log::info;
 

@@ -1,8 +1,7 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use super::communication::ResultSender;
-use super::messages::*;
+use super::communication::{ResultSender, ResponseReceiver, ResponseMessage};
 use super::response::Response;
 use super::response_info::ResponseInfo;
 use super::scraper::ScraperManager;

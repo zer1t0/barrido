@@ -5,10 +5,12 @@ use std::sync::Arc;
 use std::thread;
 use threadpool::ThreadPool;
 
-use super::communication::*;
+use super::communication::{
+    EndChannel, ResponseChannel, ResultChannel, ResultReceiver, UrlChannel,
+    UrlsChannel,
+};
 use super::end_checker::EndChecker;
 use super::http_client::*;
-use super::messages::*;
 use super::paths_provider::PathProvider;
 use super::requester::Requester;
 use super::response_handler::*;
@@ -97,14 +99,11 @@ struct PathDiscovererSpawner {
     requesters_pool: ThreadPool,
     response_handlers_pool: ThreadPool,
     paths_provider_pool: ThreadPool,
-    result_communicator: ResultCommunicator,
-    end_communicator: EndCommunicator,
-    response_sender: ResponseSender,
-    response_receiver: ResponseReceiver,
-    url_sender: UrlSender,
-    url_receiver: UrlReceiver,
-    new_urls_sender: UrlsSender,
-    new_urls_receiver: UrlsReceiver,
+    result_channel: ResultChannel,
+    end_channel: EndChannel,
+    response_channel: ResponseChannel,
+    url_channel: UrlChannel,
+    urls_channel: UrlsChannel,
     use_scraper: bool,
 }
 
@@ -117,15 +116,7 @@ impl PathDiscovererSpawner {
         response_handlers_pool: ThreadPool,
         use_scraper: bool,
     ) -> Self {
-        let (response_sender, response_receiver) = new_response_channel();
-
         let max_paths_count = requesters_pool.max_count() * 4;
-        let (url_sender, url_receiver) = new_url_channel(max_paths_count);
-
-        let (new_urls_sender, new_urls_receiver) = new_urls_channel();
-
-        let paths_provider_pool =
-            ThreadPool::with_name("Providers".to_string(), 1);
 
         return Self {
             response_verificator,
@@ -133,15 +124,15 @@ impl PathDiscovererSpawner {
             base_urls,
             requesters_pool,
             response_handlers_pool,
-            paths_provider_pool,
-            result_communicator: ResultCommunicator::new(),
-            end_communicator: EndCommunicator::new(),
-            response_sender,
-            response_receiver,
-            url_sender,
-            url_receiver,
-            new_urls_sender,
-            new_urls_receiver,
+            paths_provider_pool: ThreadPool::with_name(
+                "Providers".to_string(),
+                1,
+            ),
+            result_channel: ResultChannel::default(),
+            end_channel: EndChannel::default(),
+            response_channel: ResponseChannel::default(),
+            url_channel: UrlChannel::new(max_paths_count),
+            urls_channel: UrlsChannel::default(),
             use_scraper,
         };
     }
@@ -172,13 +163,10 @@ impl PathDiscovererSpawner {
             self.response_handlers_pool,
             paths_provider_wait_mutex,
             self.paths_provider_pool,
-            self.end_communicator.sender().clone(),
+            self.end_channel.sender().clone(),
         );
 
-        return PathDiscoverer::new(
-            self.result_communicator,
-            self.end_communicator,
-        );
+        return PathDiscoverer::new(self.result_channel, self.end_channel);
     }
 
     fn spawn_response_handlers(&mut self, wait_mutexes: &Vec<WaitMutex>) {
@@ -188,10 +176,10 @@ impl PathDiscovererSpawner {
     }
 
     fn spawn_response_handler(&mut self, wait_mutex: WaitMutex, id: usize) {
-        let response_receiver = self.response_receiver.clone();
-        let result_sender = self.result_communicator.sender().clone();
+        let response_receiver = self.response_channel.receiver().clone();
+        let result_sender = self.result_channel.sender().clone();
         let response_verificator = self.response_verificator.clone();
-        let new_urls_sender = self.new_urls_sender.clone();
+        let new_urls_sender = self.urls_channel.sender().clone();
         let use_scraper = self.use_scraper;
 
         self.response_handlers_pool.execute(move || {
@@ -222,9 +210,9 @@ impl PathDiscovererSpawner {
     }
 
     fn spawn_requester(&mut self, wait_mutex: WaitMutex, requester_id: usize) {
-        let url_receiver = self.url_receiver.clone();
+        let url_receiver = self.url_channel.receiver().clone();
         let client = self.url_client.clone();
-        let response_sender = self.response_sender.clone();
+        let response_sender = self.response_channel.sender().clone();
 
         self.requesters_pool.execute(move || {
             Requester::new(
@@ -243,8 +231,8 @@ impl PathDiscovererSpawner {
         paths_reader: BufReader<std::fs::File>,
         wait_mutex: WaitMutex,
     ) {
-        let url_sender = self.url_sender.clone();
-        let new_urls_receiver = self.new_urls_receiver.clone();
+        let url_sender = self.url_channel.sender().clone();
+        let new_urls_receiver = self.urls_channel.receiver().clone();
         let base_urls = self.base_urls.clone();
         self.paths_provider_pool.execute(move || {
             PathProvider::new(url_sender, new_urls_receiver, wait_mutex)
@@ -277,26 +265,26 @@ impl PathDiscovererSpawner {
 }
 
 pub struct PathDiscoverer {
-    result_communicator: ResultCommunicator,
-    end_communicator: EndCommunicator,
+    result_channel: ResultChannel,
+    end_channel: EndChannel,
 }
 
 impl PathDiscoverer {
     fn new(
-        result_communicator: ResultCommunicator,
-        end_communicator: EndCommunicator,
+        result_channel: ResultChannel,
+        end_channel: EndChannel,
     ) -> Self {
         return Self {
-            result_communicator,
-            end_communicator,
+            result_channel,
+            end_channel,
         };
     }
 
     pub fn result_receiver(&self) -> &ResultReceiver {
-        return self.result_communicator.receiver();
+        return self.result_channel.receiver();
     }
 
     pub fn end_receiver(&self) -> &Receiver<()> {
-        return self.end_communicator.receiver();
+        return self.end_channel.receiver();
     }
 }

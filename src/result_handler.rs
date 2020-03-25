@@ -1,12 +1,12 @@
 use log::info;
 use std::time::{Duration, Instant};
 
-use crate::discoverer::communication;
+use crate::discoverer::communication::ResultReceiver;
 use crate::discoverer::response_info::ResponseInfo;
 use crate::printer::Printer;
 
 pub struct ResultHandler {
-    result_receiver: communication::ResultReceiver,
+    result_receiver: ResultReceiver,
     end_receiver: crossbeam_channel::Receiver<()>,
     signal_receiver: crossbeam_channel::Receiver<()>,
     progress_scheluder: crossbeam_channel::Receiver<Instant>,
@@ -18,7 +18,7 @@ pub struct ResultHandler {
 
 impl ResultHandler {
     pub fn start(
-        result_receiver: communication::ResultReceiver,
+        result_receiver: ResultReceiver,
         end_receiver: crossbeam_channel::Receiver<()>,
         signal_receiver: crossbeam_channel::Receiver<()>,
         max_requests_count: usize,
@@ -38,7 +38,7 @@ impl ResultHandler {
     }
 
     fn new(
-        result_receiver: communication::ResultReceiver,
+        result_receiver: ResultReceiver,
         end_receiver: crossbeam_channel::Receiver<()>,
         signal_receiver: crossbeam_channel::Receiver<()>,
         max_requests_count: usize,
