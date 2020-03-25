@@ -1,8 +1,7 @@
-use super::wait_mutex::WaitMutex;
 use crossbeam_channel::RecvError;
 use reqwest::{Client, Url};
 use std::sync::Arc;
-use crate::discoverer::communication::{ResponseSender, ResponseMessage, UrlMessage, UrlReceiver};
+use crate::discoverer::communication::{ResponseSender, ResponseMessage, UrlMessage, UrlReceiver, WaitMutex};
 
 use log::info;
 

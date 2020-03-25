@@ -9,4 +9,3 @@ mod response_handler;
 pub mod response_info;
 mod scraper;
 pub mod verificator;
-mod wait_mutex;

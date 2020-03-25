@@ -6,8 +6,8 @@ use std::thread;
 use threadpool::ThreadPool;
 
 use super::communication::{
-    EndChannel, ResponseChannel, ResultChannel, ResultReceiver, UrlChannel,
-    UrlsChannel,
+    new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
+    ResultChannel, ResultReceiver, UrlChannel, UrlsChannel, WaitMutex,
 };
 use super::end_checker::EndChecker;
 use super::http_client::*;
@@ -17,8 +17,6 @@ use super::response_handler::*;
 use super::scraper::*;
 use super::verificator;
 use super::verificator::*;
-use super::wait_mutex;
-use super::wait_mutex::WaitMutex;
 
 pub struct PathDiscovererBuilder {
     base_urls: Vec<Url>,
@@ -142,12 +140,12 @@ impl PathDiscovererSpawner {
         paths_reader: BufReader<std::fs::File>,
     ) -> PathDiscoverer {
         let response_handlers_wait_mutexes =
-            wait_mutex::new_vec(self.response_handlers_pool.max_count());
+            new_wait_mutex_vec(self.response_handlers_pool.max_count());
 
         let requesters_wait_mutexes =
-            wait_mutex::new_vec(self.requesters_pool.max_count());
+            new_wait_mutex_vec(self.requesters_pool.max_count());
 
-        let paths_provider_wait_mutex = wait_mutex::new();
+        let paths_provider_wait_mutex = new_wait_mutex();
 
         self.spawn_response_handlers(&response_handlers_wait_mutexes);
         self.spawn_requesters(&requesters_wait_mutexes);
@@ -270,10 +268,7 @@ pub struct PathDiscoverer {
 }
 
 impl PathDiscoverer {
-    fn new(
-        result_channel: ResultChannel,
-        end_channel: EndChannel,
-    ) -> Self {
+    fn new(result_channel: ResultChannel, end_channel: EndChannel) -> Self {
         return Self {
             result_channel,
             end_channel,

@@ -1,10 +1,11 @@
+use crate::discoverer::communication::{
+    UrlMessage, UrlSender, UrlsMessage, UrlsReceiver, WaitMutex,
+};
 use crossbeam_channel::*;
 use reqwest::Url;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Lines};
-use crate::discoverer::communication::{UrlSender, UrlsReceiver, UrlMessage, UrlsMessage};
-use super::wait_mutex::WaitMutex;
 
 use log::info;
 

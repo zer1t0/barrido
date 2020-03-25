@@ -1,12 +1,11 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use super::communication::{ResultSender, ResponseReceiver, ResponseMessage};
+use super::communication::{ResultSender, ResponseReceiver, ResponseMessage, WaitMutex};
 use super::response::Response;
 use super::response_info::ResponseInfo;
 use super::scraper::ScraperManager;
 use super::verificator::Verificator;
-use super::wait_mutex::WaitMutex;
 use reqwest::Url;
 
 use log::info;

@@ -1,8 +1,7 @@
+use crate::discoverer::communication::WaitMutex;
 use std::thread::sleep;
 use std::time::Duration;
 use threadpool::ThreadPool;
-
-use super::wait_mutex::WaitMutex;
 
 pub struct EndChecker {
     requesters_wait_mutexes: Vec<WaitMutex>,
