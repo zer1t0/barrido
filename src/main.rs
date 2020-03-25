@@ -1,23 +1,23 @@
 mod arguments;
 pub mod discoverer;
+mod printer;
 mod result_handler;
 mod result_saver;
-mod printer;
 
+use ctrlc;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use ctrlc;
 
 use crossbeam_channel;
 
 use discoverer::http_client::HttpOptions;
 use discoverer::path_discoverer::*;
-use result_handler::ResultHandler;
-use printer::Printer;
-use result_saver::JsonResultSaver;
 use discoverer::verificator::*;
+use printer::Printer;
 use reqwest::Url;
+use result_handler::ResultHandler;
+use result_saver::JsonResultSaver;
 
 use arguments::*;
 
@@ -25,8 +25,8 @@ fn main() {
     env_logger::init();
     let args = parse_args();
 
-    let wordlist = File::open(args.wordlist())
-        .expect("Error opening wordlist file");
+    let wordlist =
+        File::open(args.wordlist()).expect("Error opening wordlist file");
 
     let paths_reader = BufReader::new(wordlist);
 
@@ -41,20 +41,19 @@ fn main() {
         }
     };
 
-
     if let Some(invalid_regex) = args.regex_verification() {
-        verificator = verificator &
-            !RegexVerificator::new(invalid_regex.clone())
+        verificator =
+            verificator & !RegexVerificator::new(invalid_regex.clone())
     }
 
     if let Some(size_verification) = args.size_verification() {
         let size_verficator = match size_verification {
             SizeVerification::RangeSize(min_size, max_size) => {
                 SizeVerificator::new(*min_size, *max_size)
-            },
+            }
             SizeVerification::ExactValidSize(size) => {
                 SizeVerificator::new(*size, *size)
-            },
+            }
             SizeVerification::ExactInvalidSize(size) => {
                 !SizeVerificator::new(*size, *size)
             }
@@ -66,21 +65,14 @@ fn main() {
 
     let max_requests_count = get_file_lines(args.wordlist()) * base_urls.len();
 
+    let discoverer = PathDiscovererBuilder::new(base_urls, paths_reader)
+        .requesters_count(args.threads())
+        .verificator(verificator)
+        .http_options(http_options)
+        .use_scraper(args.use_scraper())
+        .spawn();
 
-    let discoverer = PathDiscovererBuilder::new(
-        base_urls,
-        paths_reader
-    )
-    .requesters_count(args.threads())
-    .verificator(verificator)
-    .http_options(http_options)
-    .use_scraper(args.use_scraper())
-    .spawn();
-
-    let (
-        signal_sender, 
-        signal_receiver
-    ) = crossbeam_channel::unbounded::<()>();
+    let (signal_sender, signal_receiver) = crossbeam_channel::unbounded::<()>();
 
     spawn_signal_handler(signal_sender);
 
@@ -92,29 +84,26 @@ fn main() {
         args.expand_path(),
     );
 
-    
     let results = ResultHandler::start(
         discoverer.result_receiver().clone(),
         discoverer.end_receiver().clone(),
         signal_receiver,
         max_requests_count,
-        printer
+        printer,
     );
 
-    if let Some(out_file_path) = args.out_file_json() {    
+    if let Some(out_file_path) = args.out_file_json() {
         JsonResultSaver::save_results(&results, out_file_path);
     }
 }
 
-
-
-fn spawn_signal_handler(
-    sender: crossbeam_channel::Sender<()>
-) {
+fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {
     ctrlc::set_handler(move || {
-        sender.send(())
+        sender
+            .send(())
             .expect("SignalHandler: error sending signal");
-    }).unwrap();
+    })
+    .unwrap();
 }
 
 fn get_file_lines<P: AsRef<Path>>(path: P) -> usize {
@@ -138,7 +127,7 @@ fn parse_urls(urls: &str) -> Vec<Url> {
                     }
                 }
             }
-        },
+        }
         Err(_) => {
             let mut url_str = urls.to_string();
 
@@ -147,18 +136,11 @@ fn parse_urls(urls: &str) -> Vec<Url> {
             }
             if let Ok(base_url) = Url::parse(&url_str) {
                 base_urls.push(base_url);
-            }
-            else {
+            } else {
                 println!("[X] {} is not a valid URL", url_str);
                 std::process::exit(-1);
             }
-
         }
     };
     return base_urls;
 }
-
-
-
-
-

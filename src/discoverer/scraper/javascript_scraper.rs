@@ -1,16 +1,15 @@
-use reqwest::Url;
 use super::super::response::Response;
-use regex::{Regex,CaptureMatches};
+use regex::{CaptureMatches, Regex};
+use reqwest::Url;
 
 pub struct JsScraper {
-    paths_scraper: JsPathsScraper
+    paths_scraper: JsPathsScraper,
 }
 
 impl JsScraper {
-
     pub fn new() -> Self {
-        return Self{
-            paths_scraper: JsPathsScraper::new()
+        return Self {
+            paths_scraper: JsPathsScraper::new(),
         };
     }
 
@@ -28,10 +27,11 @@ impl JsScraper {
         return urls;
     }
 
-    fn clean_and_add_path(&self, 
+    fn clean_and_add_path(
+        &self,
         current_url: &Url,
         urls: &mut Vec<Url>,
-        path: &str
+        path: &str,
     ) {
         match current_url.join(&path) {
             Ok(mut url) => {
@@ -40,46 +40,42 @@ impl JsScraper {
                 if !urls.contains(&url) {
                     urls.push(url);
                 }
-            },
+            }
             Err(error) => {
-                panic!("Error joining url error({}) url({}) path({})", 
-                    error,
-                    current_url,
-                    path
+                panic!(
+                    "Error joining url error({}) url({}) path({})",
+                    error, current_url, path
                 );
             }
         }
     }
-
 }
 
 struct JsPathsScraper {
-    paths_regex: Regex
+    paths_regex: Regex,
 }
 
 impl<'r, 't> JsPathsScraper {
-
     fn new() -> Self {
         let path_segment_regex = r#"/[\dA-Za-z\-_~\.%]+(/[\dA-Za-z\-_~\.%]*)*"#;
         let query_segment_regex = r#"\?([\dA-Za-z\-_~\.%=&]*)"#;
         let fragment_segment_regex = r#"#([\dA-Za-z\-_~\.%=&]*)"#;
         let base_re = format!(
-            r#"['"](({})({})?({})?)['"]"#, 
-            path_segment_regex,
-            query_segment_regex,
-            fragment_segment_regex
+            r#"['"](({})({})?({})?)['"]"#,
+            path_segment_regex, query_segment_regex, fragment_segment_regex
         );
 
         return Self {
-            paths_regex: Regex::new(&base_re).unwrap()
+            paths_regex: Regex::new(&base_re).unwrap(),
         };
     }
 
     fn scrap(&'r self, js_body: &'t str) -> JsPathsScraperIter<'r, 't> {
-        return JsPathsScraperIter::new(self.paths_regex.captures_iter(js_body));
+        return JsPathsScraperIter::new(
+            self.paths_regex.captures_iter(js_body),
+        );
     }
 }
-
 
 struct JsPathsScraperIter<'r, 't> {
     matches: CaptureMatches<'r, 't>,
@@ -87,7 +83,7 @@ struct JsPathsScraperIter<'r, 't> {
 
 impl<'r, 't> JsPathsScraperIter<'r, 't> {
     fn new(matches: CaptureMatches<'r, 't>) -> Self {
-        return Self {matches};
+        return Self { matches };
     }
 }
 
@@ -98,9 +94,7 @@ impl<'r, 't> Iterator for JsPathsScraperIter<'r, 't> {
         let capture = self.matches.next()?;
         return Some(capture.get(1).unwrap().as_str().into());
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -113,18 +107,12 @@ mod tests {
 
     #[test]
     fn double_quote_alphanumeric() {
-        assert_eq!(
-            vec!["/aB3.-_~%27"],
-            check_regex("\"/aB3.-_~%27\"")
-        );
+        assert_eq!(vec!["/aB3.-_~%27"], check_regex("\"/aB3.-_~%27\""));
     }
 
     #[test]
     fn double_quote_invalid_characters() {
-        assert_eq!(
-            vec!["/aB3.-_~%27"],
-            check_regex("\"/aB3.-_~%27\" \"/(\"")
-        );
+        assert_eq!(vec!["/aB3.-_~%27"], check_regex("\"/aB3.-_~%27\" \"/(\""));
     }
 
     #[test]
@@ -137,18 +125,12 @@ mod tests {
 
     #[test]
     fn single_quote_multilevel() {
-        assert_eq!(
-            vec!["/abc1234/"],
-            check_regex("'/abc1234/'")
-        );
+        assert_eq!(vec!["/abc1234/"], check_regex("'/abc1234/'"));
     }
 
     #[test]
     fn several_valid_strings() {
-        assert_eq!(
-            vec!["/abc", "/123"],
-            check_regex("\"/abc\" \"/123\"")
-        );
+        assert_eq!(vec!["/abc", "/123"], check_regex("\"/abc\" \"/123\""));
     }
 
     #[test]
@@ -161,27 +143,16 @@ mod tests {
 
     #[test]
     fn double_quote_with_fragment() {
-        assert_eq!(
-            vec!["/a#bcd"],
-            check_regex("\"/a#bcd\"")
-        );
+        assert_eq!(vec!["/a#bcd"], check_regex("\"/a#bcd\""));
     }
 
     #[test]
     fn double_slash() {
-        assert_eq!(
-            Vec::<String>::new(),
-            check_regex("\"//\"")
-        );
+        assert_eq!(Vec::<String>::new(), check_regex("\"//\""));
     }
 
     #[test]
     fn double_slash_after_path() {
-        assert_eq!(
-            vec!["/aaa//"],
-            check_regex("\"/aaa//\"")
-        );
+        assert_eq!(vec!["/aaa//"], check_regex("\"/aaa//\""));
     }
-
-
 }

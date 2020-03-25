@@ -1,6 +1,6 @@
 use super::super::response::Response;
-use std::ops::{BitAnd, Not};
 use super::{AndVerificator, NorVerificator};
+use std::ops::{BitAnd, Not};
 
 pub type Verificator = Box<dyn VerificatorTrait>;
 
@@ -14,7 +14,6 @@ impl BitAnd for Verificator {
     fn bitand(self, rhs: Self) -> Self {
         return AndVerificator::new(self, rhs);
     }
-
 }
 
 impl Not for Verificator {

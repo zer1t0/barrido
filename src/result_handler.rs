@@ -1,8 +1,8 @@
-use std::time::{Duration,Instant};
 use log::info;
+use std::time::{Duration, Instant};
 
-use crate::discoverer::response_info::ResponseInfo;
 use crate::discoverer::communication;
+use crate::discoverer::response_info::ResponseInfo;
 use crate::printer::Printer;
 
 pub struct ResultHandler {
@@ -12,12 +12,11 @@ pub struct ResultHandler {
     progress_scheluder: crossbeam_channel::Receiver<Instant>,
     received_count: usize,
     max_requests_count: usize,
-    results : Vec<ResponseInfo>,
+    results: Vec<ResponseInfo>,
     printer: Printer,
 }
 
 impl ResultHandler {
-
     pub fn start(
         result_receiver: communication::ResultReceiver,
         end_receiver: crossbeam_channel::Receiver<()>,
@@ -25,21 +24,17 @@ impl ResultHandler {
         max_requests_count: usize,
         printer: Printer,
     ) -> Vec<ResponseInfo> {
-
-        
-
         let mut handler = Self::new(
             result_receiver,
             end_receiver,
             signal_receiver,
             max_requests_count,
-            printer
+            printer,
         );
 
         handler.run();
 
         return handler.results;
-        
     }
 
     fn new(
@@ -53,10 +48,12 @@ impl ResultHandler {
             result_receiver,
             end_receiver,
             signal_receiver,
-            progress_scheluder: crossbeam_channel::tick(Duration::from_millis(5)),
+            progress_scheluder: crossbeam_channel::tick(Duration::from_millis(
+                5,
+            )),
             max_requests_count,
             received_count: 0,
-            results : Vec::new(),
+            results: Vec::new(),
             printer,
         };
     }
@@ -66,7 +63,7 @@ impl ResultHandler {
             crossbeam_channel::select! {
                 recv(self.progress_scheluder) -> _ => {
                     self.printer.print_progress(
-                        self.received_count, 
+                        self.received_count,
                         self.max_requests_count
                     );
                 }
@@ -107,11 +104,10 @@ impl ResultHandler {
     }
 
     fn handle_result(&mut self, response_info: ResponseInfo) {
-
         self.printer.print_path(
             response_info.url(),
             response_info.status(),
-            response_info.body_length()
+            response_info.body_length(),
         );
 
         self.results.push(response_info);
@@ -126,5 +122,4 @@ impl ResultHandler {
         self.printer.print_error(error);
         self.received_count += 1;
     }
-
 }

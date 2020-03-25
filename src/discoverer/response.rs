@@ -1,14 +1,13 @@
-use reqwest::Url;
 use reqwest;
 use reqwest::header::*;
+use reqwest::Url;
 
 pub struct Response {
     response: reqwest::Response,
-    body: String
+    body: String,
 }
 
 impl Response {
-
     pub fn body(&self) -> &String {
         return &self.body;
     }
@@ -25,8 +24,8 @@ impl Response {
         let headers = self.response.headers();
 
         let content_type = headers.get(CONTENT_TYPE)?;
-        let content_type = content_type.to_str()
-            .expect("Unable to parse Content-Type");
+        let content_type =
+            content_type.to_str().expect("Unable to parse Content-Type");
 
         let mut name = "";
         for part in content_type.split(";") {
@@ -36,43 +35,30 @@ impl Response {
 
         return ContentType::from_str(name);
     }
-
 }
-
 
 impl From<reqwest::Response> for Response {
-
     fn from(mut response: reqwest::Response) -> Self {
-
         return Self {
             body: response.text().expect("Error parsing response body"),
-            response
+            response,
         };
-
     }
 }
-
 
 pub enum ContentType {
     Html,
-    Javascript
+    Javascript,
 }
 
 impl ContentType {
-
-
     fn from_str(s: &str) -> Option<Self> {
         match s {
-            "text/html" | "application/xhtml+xml" => {
-                Some(ContentType::Html)
-            }
+            "text/html" | "application/xhtml+xml" => Some(ContentType::Html),
             "text/javascript"
-            | "application/javascript" 
-            | "application/x-javascript" => {
-                Some(ContentType::Javascript)
-            }
-            _ => None
+            | "application/javascript"
+            | "application/x-javascript" => Some(ContentType::Javascript),
+            _ => None,
         }
     }
-
 }

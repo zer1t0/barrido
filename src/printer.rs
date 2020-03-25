@@ -6,12 +6,11 @@ pub struct Printer {
     show_body_length: bool,
     show_progress: bool,
     expand_path: bool,
-    cleaner_str: &'static str
+    cleaner_str: &'static str,
 }
 
 impl Printer {
-
-    const TERMINAL_CLEANER_STRING: &'static str =  "\r\x1b[2K";
+    const TERMINAL_CLEANER_STRING: &'static str = "\r\x1b[2K";
 
     pub fn new(
         verbosity: u64,
@@ -20,12 +19,11 @@ impl Printer {
         show_progress: bool,
         expand_path: bool,
     ) -> Self {
-
         let cleaner_str;
         if show_progress {
             cleaner_str = Self::TERMINAL_CLEANER_STRING;
-        }else {
-           cleaner_str = "" 
+        } else {
+            cleaner_str = ""
         }
 
         return Self {
@@ -34,12 +32,11 @@ impl Printer {
             show_body_length,
             show_progress,
             expand_path,
-            cleaner_str
+            cleaner_str,
         };
     }
 
     pub fn print_path(&self, url: &Url, status: u16, body_length: usize) {
-
         let path;
         if self.expand_path {
             path = url.as_str();
@@ -55,23 +52,14 @@ impl Printer {
             line += format!(" {}", body_length).as_str();
         }
 
-        println!(
-            "{}{}", 
-            self.cleaner_str,
-            line
-        );
+        println!("{}{}", self.cleaner_str, line);
     }
 
     pub fn print_progress(&self, current_count: usize, max_count: usize) {
         if self.show_progress {
             let percentage = current_count as f32 / max_count as f32 * 100.0;
 
-            print!(
-                "\r{}/{} {:.2}%",
-                current_count, 
-                max_count, 
-                percentage
-            );
+            print!("\r{}/{} {:.2}%", current_count, max_count, percentage);
         }
     }
 
@@ -81,11 +69,7 @@ impl Printer {
 
     pub fn print_error(&self, error: reqwest::Error) {
         if self.verbosity > 0 {
-            eprintln!( 
-                "{}[x] {:?}", self.cleaner_str, error
-            );
+            eprintln!("{}[x] {:?}", self.cleaner_str, error);
         }
-
     }
-
 }

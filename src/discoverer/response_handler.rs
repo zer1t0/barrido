@@ -1,14 +1,14 @@
-use std::sync::*;
 use crossbeam_channel::*;
+use std::sync::*;
 
-use super::response_info::ResponseInfo;
-use super::verificator::Verificator;
 use super::communication::ResultSender;
-use super::scraper::ScraperManager;
+use super::messages::*;
 use super::response::Response;
+use super::response_info::ResponseInfo;
+use super::scraper::ScraperManager;
+use super::verificator::Verificator;
 use super::wait_mutex::WaitMutex;
 use reqwest::Url;
-use super::messages::*;
 
 use log::info;
 
@@ -22,7 +22,6 @@ pub(super) struct ResponseHandler {
 }
 
 impl ResponseHandler {
-
     pub(super) fn new(
         response_receiver: Receiver<ResponseMessage>,
         result_sender: ResultSender,
@@ -37,7 +36,7 @@ impl ResponseHandler {
             verificator,
             scraper,
             wait_mutex,
-            id
+            id,
         };
     }
 
@@ -45,14 +44,15 @@ impl ResponseHandler {
         loop {
             match self.wait_for_response() {
                 Ok(result) => self.handle_http_result(result),
-                Err(_) => break
+                Err(_) => break,
             }
         }
     }
 
-    fn wait_for_response(&self)
-    -> Result<ResponseMessage, RecvError> {
-        let mut is_waiting = self.wait_mutex.lock()
+    fn wait_for_response(&self) -> Result<ResponseMessage, RecvError> {
+        let mut is_waiting = self
+            .wait_mutex
+            .lock()
             .expect("Response_Handler: error locking wait mutex");
         *is_waiting = true;
         return self.response_receiver.recv();
@@ -62,7 +62,7 @@ impl ResponseHandler {
         let base_url = message.base_url;
         match message.response {
             Ok(response) => self.process_response(base_url, response),
-            Err(err) => self.result_sender.send_error(err)
+            Err(err) => self.result_sender.send_error(err),
         }
     }
 
@@ -72,7 +72,7 @@ impl ResponseHandler {
         if self.is_valid_response(&response) {
             self.process_valid_response(base_url, response);
         } else {
-            self.process_invalid_response(response);   
+            self.process_invalid_response(response);
         }
     }
 
@@ -82,18 +82,15 @@ impl ResponseHandler {
 
     fn process_valid_response(&self, base_url: Url, response: Response) {
         info!("{}: valid response for {}", self.id, response.url());
-        
+
         self.scraper.scrap_response(base_url, &response);
-        let response_info  = ResponseInfo::new(response);
+        let response_info = ResponseInfo::new(response);
         self.result_sender.send_valid_response(response_info);
-        
     }
 
     fn process_invalid_response(&self, response: Response) {
         info!("{}: invalid response for {}", self.id, response.url());
-        let response_info  = ResponseInfo::new(response);
+        let response_info = ResponseInfo::new(response);
         self.result_sender.send_invalid_response(response_info)
     }
-
 }
-

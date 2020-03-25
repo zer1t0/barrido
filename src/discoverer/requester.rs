@@ -1,10 +1,10 @@
-use reqwest::{Client,Url};
-use crossbeam_channel::{RecvError};
-use super::wait_mutex::WaitMutex;
-use std::sync::{Arc};
 use super::messages::*;
+use super::wait_mutex::WaitMutex;
+use crossbeam_channel::RecvError;
+use reqwest::{Client, Url};
+use std::sync::Arc;
 
-use log::{info};
+use log::info;
 
 pub struct Requester {
     client: Arc<Client>,
@@ -15,7 +15,6 @@ pub struct Requester {
 }
 
 impl Requester {
-
     pub fn new(
         client: Arc<Client>,
         url_receiver: UrlReceiver,
@@ -37,10 +36,8 @@ impl Requester {
             match self.wait_for_path() {
                 Ok(url_message) => {
                     let response = self.request(url_message.url);
-                    let response_message = ResponseMessage::new(
-                        url_message.base_url, 
-                        response
-                    );
+                    let response_message =
+                        ResponseMessage::new(url_message.base_url, response);
                     self.send_response(response_message);
                 }
                 Err(_) => {
@@ -56,7 +53,9 @@ impl Requester {
     }
 
     fn wait_for_path(&self) -> Result<UrlMessage, RecvError> {
-        let mut is_waiting = self.wait_mutex.lock()
+        let mut is_waiting = self
+            .wait_mutex
+            .lock()
             .expect("Requester: error locking wait mutex");
 
         *is_waiting = true;

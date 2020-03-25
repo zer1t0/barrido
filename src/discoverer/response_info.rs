@@ -2,15 +2,12 @@ use super::response::Response;
 use reqwest::Url;
 
 pub struct ResponseInfo {
-    response: Response
+    response: Response,
 }
 
 impl ResponseInfo {
-
     pub fn new(response: Response) -> Self {
-        return Self {
-            response
-        };
+        return Self { response };
     }
 
     pub fn status(&self) -> u16 {
@@ -23,5 +20,5 @@ impl ResponseInfo {
 
     pub fn body_length(&self) -> usize {
         return self.response.body().len();
-    } 
+    }
 }
