@@ -32,44 +32,17 @@ fn main() {
 
     let http_options: HttpOptions = args.clone().into();
 
-    let mut verificator: Verificator = match args.codes_verification() {
-        CodesVerification::ValidCodes(codes) => {
-            CodesVerificator::new(codes.clone())
-        }
-        CodesVerification::InvalidCodes(codes) => {
-            !CodesVerificator::new(codes.clone())
-        }
-    };
-
-    if let Some(invalid_regex) = args.regex_verification() {
-        verificator =
-            verificator & !RegexVerificator::new(invalid_regex.clone())
-    }
-
-    if let Some(size_verification) = args.size_verification() {
-        let size_verficator = match size_verification {
-            SizeVerification::RangeSize(min_size, max_size) => {
-                SizeVerificator::new(*min_size, *max_size)
-            }
-            SizeVerification::ExactValidSize(size) => {
-                SizeVerificator::new(*size, *size)
-            }
-            SizeVerification::ExactInvalidSize(size) => {
-                !SizeVerificator::new(*size, *size)
-            }
-        };
-        verificator = verificator & size_verficator;
-    }
+    let verificator = generate_verificator(&args);
 
     let base_urls = parse_urls(args.urls());
 
     let max_requests_count = get_file_lines(args.wordlist()) * base_urls.len();
 
     let discoverer = PathDiscovererBuilder::new(base_urls, paths_reader)
-        .requesters_count(args.threads())
+        .requesters_count(*args.threads())
         .verificator(verificator)
         .http_options(http_options)
-        .use_scraper(args.use_scraper())
+        .use_scraper(*args.use_scraper())
         .spawn();
 
     let (signal_sender, signal_receiver) = crossbeam_channel::unbounded::<()>();
@@ -77,11 +50,11 @@ fn main() {
     spawn_signal_handler(signal_sender);
 
     let printer = Printer::new(
-        args.verbosity(),
-        args.show_status(),
-        args.show_body_length(),
-        args.show_progress(),
-        args.expand_path(),
+        *args.verbosity(),
+        *args.show_status(),
+        *args.show_body_length(),
+        *args.show_progress(),
+        *args.expand_path(),
     );
 
     let results = ResultHandler::start(
@@ -95,6 +68,72 @@ fn main() {
     if let Some(out_file_path) = args.out_file_json() {
         JsonResultSaver::save_results(&results, out_file_path);
     }
+}
+
+fn generate_verificator(args: &Arguments) -> Verificator {
+    let codes_verificator = generate_codes_verificator(args);
+    let regex_verificator = generate_regex_verificator(args);
+    let sizes_verificator = generate_sizes_verificator(args);
+
+    return codes_verificator & regex_verificator & sizes_verificator;
+}
+
+fn generate_codes_verificator(args: &Arguments) -> Verificator {
+    match args.codes_verification() {
+        CodesVerification::ValidCodes(codes) => {
+            CodesVerificator::new(codes.clone())
+        }
+        CodesVerification::InvalidCodes(codes) => {
+            !CodesVerificator::new(codes.clone())
+        }
+    }
+}
+
+fn generate_regex_verificator(args: &Arguments) -> Verificator {
+    match args.regex_verification() {
+        Some(filter_regex) => !RegexVerificator::new(filter_regex.clone()),
+        None => TrueVerificator::new(),
+    }
+}
+
+fn generate_sizes_verificator(args: &Arguments) -> Verificator {
+    let range_verificator = match args.size_range_verification() {
+        Some(size_range_verification) => match size_range_verification {
+            RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
+                ranges
+                    .iter()
+                    .map(|r| SizeVerificator::new_range(r.0, r.1))
+                    .collect(),
+            ),
+            RangeSizeVerification::FilterSize(ranges) => !OrVerificator::new(
+                ranges
+                    .iter()
+                    .map(|r| SizeVerificator::new_range(r.0, r.1))
+                    .collect(),
+            ),
+        },
+        None => TrueVerificator::new(),
+    };
+
+    let exact_verificator = match args.size_exact_verification() {
+        Some(size_exact_verification) => match size_exact_verification {
+            ExactSizeVerification::MatchSize(sizes) => OrVerificator::new(
+                sizes
+                    .iter()
+                    .map(|s| SizeVerificator::new_exact(*s))
+                    .collect(),
+            ),
+            ExactSizeVerification::FilterSize(sizes) => !OrVerificator::new(
+                sizes
+                    .iter()
+                    .map(|s| SizeVerificator::new_exact(*s))
+                    .collect(),
+            ),
+        },
+        None => TrueVerificator::new(),
+    };
+
+    return range_verificator | exact_verificator;
 }
 
 fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {

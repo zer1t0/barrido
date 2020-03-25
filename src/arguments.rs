@@ -1,5 +1,6 @@
 use super::discoverer::http_client::HttpOptions;
 use clap::*;
+use getset::Getters;
 use regex::Regex;
 use reqwest::Proxy;
 use std::collections::HashMap;
@@ -142,34 +143,39 @@ fn args() -> App<'static, 'static> {
                 .help("Verbosity"),
         )
         .arg(
-            Arg::with_name("max-length")
-                .long("max-length")
-                .help("Maximum length in responses")
+            Arg::with_name("match-size")
+                .long("match-size")
+                .help("Exact length of responses")
+                .multiple(true)
+                .number_of_values(1)
                 .takes_value(true)
                 .validator(is_usize),
         )
         .arg(
-            Arg::with_name("min-length")
+            Arg::with_name("filter-size")
+                .long("filter-size")
+                .help("Exact size of invalid responses")
+                .multiple(true)
+                .number_of_values(1)
+                .takes_value(true)
+                .validator(is_usize)
+                .conflicts_with_all(&["match-size"]),
+        )
+        .arg(
+            Arg::with_name("match-size-range")
+                .long("match-size-range")
+                .help("Maximum length in responses")
+                .takes_value(true)
+                .validator(is_usize_range)
+                .conflicts_with_all(&["filter-size"]),
+        )
+        .arg(
+            Arg::with_name("filter-size-range")
                 .long("min-length")
                 .help("Minimum length in responses")
                 .takes_value(true)
-                .validator(is_usize),
-        )
-        .arg(
-            Arg::with_name("length")
-                .long("exact-length")
-                .help("Exact length of responses")
-                .takes_value(true)
-                .validator(is_usize)
-                .conflicts_with_all(&["min-length", "max-length"]),
-        )
-        .arg(
-            Arg::with_name("no-length")
-                .long("no-exact-length")
-                .help("Exact length of invalid responses")
-                .takes_value(true)
-                .validator(is_usize)
-                .conflicts_with_all(&["length", "min-length", "max-length"]),
+                .validator(is_usize_range)
+                .conflicts_with_all(&["match-size", "match-size-range"]),
         )
 }
 
@@ -185,6 +191,36 @@ fn is_usize(v: String) -> Result<(), String> {
         Ok(_) => Ok(()),
         Err(_) => Err("Must be a positive integer bigger than 0".to_string()),
     }
+}
+
+fn is_usize_range(v: String) -> Result<(), String> {
+    let parts: Vec<&str> = v.split("-").collect();
+
+    if parts.len() != 2 {
+        return Err("Range must be two parts separated by '-'".to_string());
+    }
+    let min_size = parts[0];
+    let max_size = parts[1];
+
+    if min_size != "*" {
+        match min_size.parse::<usize>() {
+            Err(_) => {
+                return Err("Range parts must be numbers or *".to_string());
+            }
+            Ok(_) => {}
+        }
+    }
+
+    if max_size != "*" {
+        match max_size.parse::<usize>() {
+            Err(_) => {
+                return Err("Range parts must be numbers or *".to_string());
+            }
+            Ok(_) => {}
+        }
+    }
+
+    return Ok(());
 }
 
 fn is_usize_major_than_zero(v: String) -> Result<(), String> {
@@ -217,13 +253,19 @@ pub enum CodesVerification {
 }
 
 #[derive(Clone)]
-pub enum SizeVerification {
-    ExactValidSize(usize),
-    ExactInvalidSize(usize),
-    RangeSize(usize, usize),
+pub enum ExactSizeVerification {
+    MatchSize(Vec<usize>),
+    FilterSize(Vec<usize>),
 }
 
 #[derive(Clone)]
+pub enum RangeSizeVerification {
+    MatchSize(Vec<(usize, usize)>),
+    FilterSize(Vec<(usize, usize)>),
+}
+
+#[derive(Clone, Getters)]
+#[getset(get = "pub")]
 pub struct Arguments {
     threads: usize,
     urls: String,
@@ -234,7 +276,8 @@ pub struct Arguments {
     expand_path: bool,
     codes_verification: CodesVerification,
     regex_verification: Option<Regex>,
-    size_verification: Option<SizeVerification>,
+    size_exact_verification: Option<ExactSizeVerification>,
+    size_range_verification: Option<RangeSizeVerification>,
     user_agent: String,
     show_status: bool,
     show_body_length: bool,
@@ -244,60 +287,6 @@ pub struct Arguments {
     timeout: Duration,
     headers: HashMap<String, String>,
     verbosity: u64,
-}
-
-impl Arguments {
-    pub fn threads(&self) -> usize {
-        return self.threads;
-    }
-
-    pub fn urls(&self) -> &String {
-        return &self.urls;
-    }
-
-    pub fn wordlist(&self) -> &String {
-        return &self.wordlist;
-    }
-
-    pub fn out_file_json(&self) -> Option<&String> {
-        return self.out_file_json.as_ref();
-    }
-
-    pub fn expand_path(&self) -> bool {
-        return self.expand_path;
-    }
-
-    pub fn codes_verification(&self) -> &CodesVerification {
-        return &self.codes_verification;
-    }
-
-    pub fn regex_verification(&self) -> Option<&Regex> {
-        return self.regex_verification.as_ref();
-    }
-
-    pub fn size_verification(&self) -> Option<&SizeVerification> {
-        return self.size_verification.as_ref();
-    }
-
-    pub fn show_status(&self) -> bool {
-        return self.show_status;
-    }
-
-    pub fn show_progress(&self) -> bool {
-        return self.show_progress;
-    }
-
-    pub fn show_body_length(&self) -> bool {
-        return self.show_body_length;
-    }
-
-    pub fn use_scraper(&self) -> bool {
-        return self.use_scraper;
-    }
-
-    pub fn verbosity(&self) -> u64 {
-        return self.verbosity;
-    }
 }
 
 impl Into<HttpOptions> for Arguments {
@@ -356,7 +345,8 @@ impl<'a> ArgumentsBuilder<'a> {
             expand_path: self.is_present("expand-path"),
             codes_verification,
             regex_verification,
-            size_verification: self.size_verification(),
+            size_range_verification: self.parse_range_sizes_verification(),
+            size_exact_verification: self.parse_exact_sizes_verification(),
             user_agent: self.value_of("user-agent").unwrap().to_string(),
             show_status: self.is_present("status"),
             show_progress: self.is_present("progress"),
@@ -412,6 +402,65 @@ impl<'a> ArgumentsBuilder<'a> {
         return codes_verification;
     }
 
+    fn parse_range_sizes_verification(&self) -> Option<RangeSizeVerification> {
+        if let Some(sizes) = self.parse_range_sizes("match-size-range") {
+            return Some(RangeSizeVerification::MatchSize(sizes));
+        }
+
+        if let Some(sizes) = self.parse_range_sizes("filter-size-range") {
+            return Some(RangeSizeVerification::FilterSize(sizes));
+        }
+
+        return None;
+    }
+
+    fn parse_range_sizes(&self, name: &str) -> Option<Vec<(usize, usize)>> {
+        if let Some(size_ranges) = self.values_of(name) {
+            let mut ranges = Vec::new();
+            for size_range in size_ranges {
+            let parts: Vec<&str> = size_range.split("-").collect();
+
+            let min_size_str = parts[0];
+            let max_size_str = parts[1];
+
+            let min_size = match min_size_str {
+                "*" => 0,
+                _ => min_size_str.parse().unwrap()
+            };
+
+            let max_size = match max_size_str {
+                "*" => usize::max_value(),
+                _ => max_size_str.parse().unwrap()
+            };
+
+                ranges.push((min_size, max_size));
+            }
+            return Some(ranges);
+        }
+
+        return None;
+    }
+
+    fn parse_exact_sizes_verification(&self) -> Option<ExactSizeVerification> {
+        if let Some(sizes) = self.parse_exact_sizes("match-size") {
+            return Some(ExactSizeVerification::MatchSize(sizes));
+        }
+
+        if let Some(sizes) = self.parse_exact_sizes("filter-size") {
+            return Some(ExactSizeVerification::FilterSize(sizes));
+        }
+
+        return None;
+    }
+
+    fn parse_exact_sizes(&self, name: &str) -> Option<Vec<usize>> {
+        Some(
+            self.values_of(name)?
+                .map(|l| l.parse().unwrap())
+                .collect(),
+        )
+    }
+
     fn regex_verification(&self) -> Option<Regex> {
         if self.is_present("invalid-regex") {
             return Some(
@@ -438,37 +487,6 @@ impl<'a> ArgumentsBuilder<'a> {
             }
         }
         return headers;
-    }
-
-    fn size_verification(&self) -> Option<SizeVerification> {
-        if self.is_present("no-length") {
-            let length = self.value_of("no-length").unwrap().parse().unwrap();
-            return Some(SizeVerification::ExactInvalidSize(length));
-        } else if self.is_present("length") {
-            let length = self.value_of("length").unwrap().parse().unwrap();
-            return Some(SizeVerification::ExactValidSize(length));
-        } else if self.is_present("min-length") || self.is_present("max-length")
-        {
-            let min_length;
-            let max_length;
-
-            if self.is_present("min-length") {
-                min_length =
-                    self.value_of("min-length").unwrap().parse().unwrap();
-            } else {
-                min_length = 0;
-            }
-
-            if self.is_present("max-length") {
-                max_length =
-                    self.value_of("max-length").unwrap().parse().unwrap();
-            } else {
-                max_length = usize::max_value();
-            }
-            return Some(SizeVerification::RangeSize(min_length, max_length));
-        }
-
-        return None;
     }
 
     fn value_of(&self, k: &str) -> Option<&str> {

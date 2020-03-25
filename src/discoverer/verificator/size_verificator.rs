@@ -7,8 +7,12 @@ pub struct SizeVerificator {
 }
 
 impl SizeVerificator {
-    pub fn new(min_size: usize, max_size: usize) -> Verificator {
+    pub fn new_range(min_size: usize, max_size: usize) -> Verificator {
         return Box::new(Self { min_size, max_size });
+    }
+
+    pub fn new_exact(size: usize) -> Verificator {
+        return Self::new_range(size, size);
     }
 }
 
