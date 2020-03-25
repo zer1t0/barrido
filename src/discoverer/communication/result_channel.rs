@@ -1,4 +1,4 @@
-use crate::discoverer::response_info::ResponseInfo;
+use crate::discoverer::communication::ResponseInfo;
 use crossbeam_channel::{Sender, Receiver, unbounded};
 use reqwest;
 use getset::Getters;

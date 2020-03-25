@@ -1,8 +1,7 @@
 use log::info;
 use std::time::{Duration, Instant};
 
-use crate::discoverer::communication::ResultReceiver;
-use crate::discoverer::response_info::ResponseInfo;
+use crate::discoverer::communication::{ResultReceiver, ResponseInfo};
 use crate::printer::Printer;
 
 pub struct ResultHandler {

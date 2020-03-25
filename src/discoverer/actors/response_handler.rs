@@ -1,9 +1,8 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use crate::discoverer::communication::{ResultSender, ResponseReceiver, ResponseMessage, WaitMutex};
+use crate::discoverer::communication::{ResultSender, ResponseReceiver, ResponseMessage, WaitMutex, ResponseInfo};
 use crate::discoverer::response::Response;
-use crate::discoverer::response_info::ResponseInfo;
 use crate::discoverer::scraper::ScraperManager;
 use crate::discoverer::verificator::Verificator;
 use reqwest::Url;

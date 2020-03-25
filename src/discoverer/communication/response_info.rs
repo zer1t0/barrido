@@ -1,4 +1,4 @@
-use super::response::Response;
+use crate::discoverer::response::Response;
 use reqwest::Url;
 
 pub struct ResponseInfo {

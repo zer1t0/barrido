@@ -7,7 +7,7 @@ pub struct JsonResultSaver {}
 
 impl JsonResultSaver {
     pub fn save_results(
-        results: &Vec<discoverer::response_info::ResponseInfo>,
+        results: &Vec<discoverer::communication::ResponseInfo>,
         out_file_path: &String,
     ) {
         let mut json_results: Vec<JsonResponseInfo> =
