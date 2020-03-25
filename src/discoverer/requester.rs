@@ -34,12 +34,7 @@ impl Requester {
     pub fn run(&self) {
         loop {
             match self.wait_for_path() {
-                Ok(url_message) => {
-                    let response = self.request(url_message.url);
-                    let response_message =
-                        ResponseMessage::new(url_message.base_url, response);
-                    self.send_response(response_message);
-                }
+                Ok(url_message) => self.get_and_send(url_message),
                 Err(_) => {
                     info!("Closing requester {}", self.id);
                     break;
@@ -48,7 +43,14 @@ impl Requester {
         }
     }
 
-    fn request(&self, url: Url) -> reqwest::Result<reqwest::Response> {
+    fn get_and_send(&self, url_message: UrlMessage) {
+        let response = self.get(url_message.url);
+        let response_message =
+            ResponseMessage::new(url_message.base_url, response);
+        self.send_response(response_message);
+    }
+
+    fn get(&self, url: Url) -> reqwest::Result<reqwest::Response> {
         return self.client.get(url).send();
     }
 
