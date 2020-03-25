@@ -11,7 +11,7 @@ use std::path::Path;
 
 use crossbeam_channel;
 
-use discoverer::http_client::HttpOptions;
+use discoverer::http::HttpOptions;
 use discoverer::path_discoverer::*;
 use discoverer::verificator::*;
 use printer::Printer;

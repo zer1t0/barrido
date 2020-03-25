@@ -1,7 +1,6 @@
 mod actors;
 pub mod communication;
-pub mod http_client;
 pub mod path_discoverer;
-mod response;
+pub mod http;
 mod scraper;
 pub mod verificator;

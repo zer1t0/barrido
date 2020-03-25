@@ -9,11 +9,11 @@ use crate::discoverer::communication::{
     new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
     ResultChannel, ResultReceiver, UrlChannel, UrlsChannel, WaitMutex,
 };
-use crate::discoverer::http_client::*;
 use crate::discoverer::scraper::*;
 use crate::discoverer::verificator;
 use crate::discoverer::verificator::*;
 use crate::discoverer::actors::{Requester, EndChecker, PathProvider, ResponseHandler};
+use crate::discoverer::http::{HttpOptions};
 
 pub struct PathDiscovererBuilder {
     base_urls: Vec<Url>,

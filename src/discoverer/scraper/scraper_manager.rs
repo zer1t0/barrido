@@ -1,4 +1,4 @@
-use super::super::response::{Response, ContentType};
+use crate::discoverer::http::{Response, ContentType};
 use super::html_scraper::HtmlScraper;
 use super::javascript_scraper::JsScraper;
 use reqwest::Url;

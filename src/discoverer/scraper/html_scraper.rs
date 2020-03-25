@@ -1,4 +1,4 @@
-use super::super::response::Response;
+use crate::discoverer::http::Response;
 use reqwest::Url;
 use scraper::{Html, Selector};
 

@@ -1,4 +1,4 @@
-use crate::discoverer::response::Response;
+use crate::discoverer::http::Response;
 use reqwest::Url;
 
 pub struct ResponseInfo {

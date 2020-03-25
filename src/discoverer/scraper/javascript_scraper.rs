@@ -1,4 +1,4 @@
-use super::super::response::Response;
+use crate::discoverer::http::Response;
 use regex::{CaptureMatches, Regex};
 use reqwest::Url;
 

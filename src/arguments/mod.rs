@@ -1,4 +1,4 @@
-use super::discoverer::http_client::HttpOptions;
+use super::discoverer::http::HttpOptions;
 use clap::*;
 use getset::Getters;
 use regex::Regex;
