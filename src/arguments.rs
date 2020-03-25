@@ -145,37 +145,21 @@ fn args() -> App<'static, 'static> {
         .arg(
             Arg::with_name("match-size")
                 .long("match-size")
-                .help("Exact length of responses")
+                .help("Exact length of responses (e.g. 94,100-200,300-*,*-600)")
                 .multiple(true)
                 .number_of_values(1)
                 .takes_value(true)
-                .validator(is_usize),
+                .validator(is_usize_or_range),
         )
         .arg(
             Arg::with_name("filter-size")
                 .long("filter-size")
-                .help("Exact size of invalid responses")
+                .help("Exact size of invalid responses (e.g. 94,100-200,300-*,*-600)")
                 .multiple(true)
                 .number_of_values(1)
                 .takes_value(true)
-                .validator(is_usize)
+                .validator(is_usize_or_range)
                 .conflicts_with_all(&["match-size"]),
-        )
-        .arg(
-            Arg::with_name("match-size-range")
-                .long("match-size-range")
-                .help("Maximum length in responses")
-                .takes_value(true)
-                .validator(is_usize_range)
-                .conflicts_with_all(&["filter-size"]),
-        )
-        .arg(
-            Arg::with_name("filter-size-range")
-                .long("min-length")
-                .help("Minimum length in responses")
-                .takes_value(true)
-                .validator(is_usize_range)
-                .conflicts_with_all(&["match-size", "match-size-range"]),
         )
 }
 
@@ -186,15 +170,12 @@ fn is_proxy(v: String) -> Result<(), String> {
     }
 }
 
-fn is_usize(v: String) -> Result<(), String> {
-    match v.parse::<usize>() {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Must be a positive integer bigger than 0".to_string()),
-    }
-}
-
-fn is_usize_range(v: String) -> Result<(), String> {
+fn is_usize_or_range(v: String) -> Result<(), String> {
     let parts: Vec<&str> = v.split("-").collect();
+
+    if parts.len() == 1 {
+        return is_usize(v);
+    }
 
     if parts.len() != 2 {
         return Err("Range must be two parts separated by '-'".to_string());
@@ -221,6 +202,13 @@ fn is_usize_range(v: String) -> Result<(), String> {
     }
 
     return Ok(());
+}
+
+fn is_usize(v: String) -> Result<(), String> {
+    match v.parse::<usize>() {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Must be a positive integer bigger than 0".to_string()),
+    }
 }
 
 fn is_usize_major_than_zero(v: String) -> Result<(), String> {
@@ -253,12 +241,6 @@ pub enum CodesVerification {
 }
 
 #[derive(Clone)]
-pub enum ExactSizeVerification {
-    MatchSize(Vec<usize>),
-    FilterSize(Vec<usize>),
-}
-
-#[derive(Clone)]
 pub enum RangeSizeVerification {
     MatchSize(Vec<(usize, usize)>),
     FilterSize(Vec<(usize, usize)>),
@@ -276,7 +258,6 @@ pub struct Arguments {
     expand_path: bool,
     codes_verification: CodesVerification,
     regex_verification: Option<Regex>,
-    size_exact_verification: Option<ExactSizeVerification>,
     size_range_verification: Option<RangeSizeVerification>,
     user_agent: String,
     show_status: bool,
@@ -346,7 +327,6 @@ impl<'a> ArgumentsBuilder<'a> {
             codes_verification,
             regex_verification,
             size_range_verification: self.parse_range_sizes_verification(),
-            size_exact_verification: self.parse_exact_sizes_verification(),
             user_agent: self.value_of("user-agent").unwrap().to_string(),
             show_status: self.is_present("status"),
             show_progress: self.is_present("progress"),
@@ -403,11 +383,11 @@ impl<'a> ArgumentsBuilder<'a> {
     }
 
     fn parse_range_sizes_verification(&self) -> Option<RangeSizeVerification> {
-        if let Some(sizes) = self.parse_range_sizes("match-size-range") {
+        if let Some(sizes) = self.parse_range_sizes("match-size") {
             return Some(RangeSizeVerification::MatchSize(sizes));
         }
 
-        if let Some(sizes) = self.parse_range_sizes("filter-size-range") {
+        if let Some(sizes) = self.parse_range_sizes("filter-size") {
             return Some(RangeSizeVerification::FilterSize(sizes));
         }
 
@@ -418,47 +398,37 @@ impl<'a> ArgumentsBuilder<'a> {
         if let Some(size_ranges) = self.values_of(name) {
             let mut ranges = Vec::new();
             for size_range in size_ranges {
-            let parts: Vec<&str> = size_range.split("-").collect();
+                let parts: Vec<&str> = size_range.split("-").collect();
 
-            let min_size_str = parts[0];
-            let max_size_str = parts[1];
+                let range = match parts.len() {
+                    1 => {
+                        let size = parts[0].parse().unwrap();
+                        (size, size)
+                    }
+                    2 => {
+                        let min_size_str = parts[0];
+                        let max_size_str = parts[1];
 
-            let min_size = match min_size_str {
-                "*" => 0,
-                _ => min_size_str.parse().unwrap()
-            };
+                        let min_size = match min_size_str {
+                            "*" => 0,
+                            _ => min_size_str.parse().unwrap(),
+                        };
 
-            let max_size = match max_size_str {
-                "*" => usize::max_value(),
-                _ => max_size_str.parse().unwrap()
-            };
+                        let max_size = match max_size_str {
+                            "*" => usize::max_value(),
+                            _ => max_size_str.parse().unwrap(),
+                        };
+                        (min_size, max_size)
+                    }
+                    _ => unreachable!()
+                };
 
-                ranges.push((min_size, max_size));
+                ranges.push(range);
             }
             return Some(ranges);
         }
 
         return None;
-    }
-
-    fn parse_exact_sizes_verification(&self) -> Option<ExactSizeVerification> {
-        if let Some(sizes) = self.parse_exact_sizes("match-size") {
-            return Some(ExactSizeVerification::MatchSize(sizes));
-        }
-
-        if let Some(sizes) = self.parse_exact_sizes("filter-size") {
-            return Some(ExactSizeVerification::FilterSize(sizes));
-        }
-
-        return None;
-    }
-
-    fn parse_exact_sizes(&self, name: &str) -> Option<Vec<usize>> {
-        Some(
-            self.values_of(name)?
-                .map(|l| l.parse().unwrap())
-                .collect(),
-        )
     }
 
     fn regex_verification(&self) -> Option<Regex> {

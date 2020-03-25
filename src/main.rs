@@ -115,25 +115,7 @@ fn generate_sizes_verificator(args: &Arguments) -> Verificator {
         None => TrueVerificator::new(),
     };
 
-    let exact_verificator = match args.size_exact_verification() {
-        Some(size_exact_verification) => match size_exact_verification {
-            ExactSizeVerification::MatchSize(sizes) => OrVerificator::new(
-                sizes
-                    .iter()
-                    .map(|s| SizeVerificator::new_exact(*s))
-                    .collect(),
-            ),
-            ExactSizeVerification::FilterSize(sizes) => !OrVerificator::new(
-                sizes
-                    .iter()
-                    .map(|s| SizeVerificator::new_exact(*s))
-                    .collect(),
-            ),
-        },
-        None => TrueVerificator::new(),
-    };
-
-    return range_verificator | exact_verificator;
+    return range_verificator;
 }
 
 fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {
