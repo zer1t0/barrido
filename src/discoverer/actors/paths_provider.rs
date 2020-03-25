@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader, Lines};
 
 use log::info;
 
-pub(super) struct PathProvider {
+pub struct PathProvider {
     url_sender: UrlSender,
     scraper_urls_receiver: UrlsReceiver,
     dispatched_paths: HashMap<String, ()>,
@@ -17,7 +17,7 @@ pub(super) struct PathProvider {
 }
 
 impl PathProvider {
-    pub(super) fn new(
+    pub fn new(
         url_sender: UrlSender,
         scraper_urls_receiver: UrlsReceiver,
         wait_mutex: WaitMutex,
@@ -30,7 +30,7 @@ impl PathProvider {
         };
     }
 
-    pub(super) fn run(
+    pub fn run(
         self,
         base_urls: Vec<Url>,
         paths_reader: BufReader<std::fs::File>,

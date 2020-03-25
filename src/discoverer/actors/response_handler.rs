@@ -1,16 +1,16 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use super::communication::{ResultSender, ResponseReceiver, ResponseMessage, WaitMutex};
-use super::response::Response;
-use super::response_info::ResponseInfo;
-use super::scraper::ScraperManager;
-use super::verificator::Verificator;
+use crate::discoverer::communication::{ResultSender, ResponseReceiver, ResponseMessage, WaitMutex};
+use crate::discoverer::response::Response;
+use crate::discoverer::response_info::ResponseInfo;
+use crate::discoverer::scraper::ScraperManager;
+use crate::discoverer::verificator::Verificator;
 use reqwest::Url;
 
 use log::info;
 
-pub(super) struct ResponseHandler {
+pub struct ResponseHandler {
     response_receiver: ResponseReceiver,
     result_sender: ResultSender,
     verificator: Arc<Verificator>,
@@ -20,7 +20,7 @@ pub(super) struct ResponseHandler {
 }
 
 impl ResponseHandler {
-    pub(super) fn new(
+    pub fn new(
         response_receiver: Receiver<ResponseMessage>,
         result_sender: ResultSender,
         verificator: Arc<Verificator>,
@@ -38,7 +38,7 @@ impl ResponseHandler {
         };
     }
 
-    pub(super) fn run(&self) {
+    pub fn run(&self) {
         loop {
             match self.wait_for_response() {
                 Ok(result) => self.handle_http_result(result),
