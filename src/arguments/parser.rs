@@ -5,6 +5,7 @@ use reqwest::Proxy;
 use std::collections::HashMap;
 use std::time::Duration;
 
+/// To parse the arguments from the clap representation to the Argument struct representation
 pub struct ArgumentsParser<'a> {
     matches: ArgMatches<'a>,
 }

@@ -1,12 +1,12 @@
-use super::parser::ArgumentsParser;
 use super::defs::args;
+use super::parser::ArgumentsParser;
 use crate::discoverer::http::HttpOptions;
+use derive_builder::Builder;
 use getset::Getters;
 use regex::Regex;
 use reqwest::Proxy;
 use std::collections::HashMap;
 use std::time::Duration;
-use derive_builder::Builder;
 
 #[derive(Clone)]
 pub enum CodesVerification {
@@ -20,6 +20,7 @@ pub enum RangeSizeVerification {
     FilterSize(Vec<(usize, usize)>),
 }
 
+/// Class used to store the arguments provided by the user.
 #[derive(Clone, Getters, Builder)]
 #[getset(get = "pub")]
 pub struct Arguments {
