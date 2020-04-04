@@ -7,7 +7,7 @@ use crate::discoverer::scraper::ScraperManager;
 use crate::discoverer::verificator::Verificator;
 use reqwest::Url;
 
-use log::info;
+use log::{info, debug, trace};
 
 pub struct ResponseHandler {
     response_receiver: ResponseReceiver,
@@ -39,19 +39,23 @@ impl ResponseHandler {
 
     pub fn run(&self) {
         loop {
-            match self.wait_for_response() {
+            match self.recv() {
                 Ok(result) => self.handle_http_result(result),
-                Err(_) => break,
+                Err(_) => {
+                    info!("Response channel was closed");
+                    break;
+                }
             }
         }
     }
 
-    fn wait_for_response(&self) -> Result<ResponseMessage, RecvError> {
+    fn recv(&self) -> Result<ResponseMessage, RecvError> {
         let mut is_waiting = self
             .wait_mutex
             .lock()
-            .expect("Response_Handler: error locking wait mutex");
+            .expect("ResponseHandler: error locking wait mutex");
         *is_waiting = true;
+        trace!("{} Waiting for response", self.id);
         return self.response_receiver.recv();
     }
 
@@ -59,7 +63,7 @@ impl ResponseHandler {
         let base_url = message.base_url;
         match message.response {
             Ok(response) => self.process_response(base_url, response),
-            Err(err) => self.result_sender.send_error(err),
+            Err(err) => self.send_error(err),
         }
     }
 
@@ -80,14 +84,31 @@ impl ResponseHandler {
     fn process_valid_response(&self, base_url: Url, response: Response) {
         info!("{}: valid response for {}", self.id, response.url());
 
-        self.scraper.scrap_response(base_url, &response);
-        let response_info = ResponseInfo::new(response);
-        self.result_sender.send_valid_response(response_info);
+        self.scrap(base_url, &response);
+        self.send_valid(ResponseInfo::new(response));
     }
 
     fn process_invalid_response(&self, response: Response) {
         info!("{}: invalid response for {}", self.id, response.url());
-        let response_info = ResponseInfo::new(response);
-        self.result_sender.send_invalid_response(response_info)
+        self.send_invalid(ResponseInfo::new(response));
+    }
+
+    fn send_error(&self, err: reqwest::Error) {
+        debug!("Send error: {:?}", err);
+        self.result_sender.send_error(err);
+    }
+
+    fn send_invalid(&self, response_info: ResponseInfo){
+        debug!("Send invalid response: {:?}", response_info);
+        self.result_sender.send_invalid_response(response_info);
+    }
+
+    fn send_valid(&self, response_info: ResponseInfo) {
+        debug!("Send valid response: {:?}", response_info);
+        self.result_sender.send_valid_response(response_info);
+    }
+
+    fn scrap(&self, base_url: Url, response: &Response) {
+        self.scraper.scrap_response(base_url, response);
     }
 }

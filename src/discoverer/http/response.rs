@@ -2,6 +2,7 @@ use reqwest;
 use reqwest::header::*;
 use reqwest::Url;
 
+#[derive(Debug)]
 pub struct Response {
     response: reqwest::Response,
     body: String,

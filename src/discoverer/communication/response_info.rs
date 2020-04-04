@@ -1,6 +1,7 @@
 use crate::discoverer::http::Response;
 use reqwest::Url;
 
+#[derive(Debug)]
 pub struct ResponseInfo {
     response: Response,
 }
