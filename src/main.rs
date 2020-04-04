@@ -12,14 +12,19 @@ use std::path::Path;
 use crossbeam_channel;
 
 use discoverer::http::HttpOptions;
-use discoverer::path_discoverer::*;
-use discoverer::verificator::*;
+use discoverer::path_discoverer::{PathDiscovererBuilder};
+use discoverer::verificator::{
+    CodesVerificator, OrVerificator, RegexVerificator, SizeVerificator,
+    TrueVerificator, Verificator,
+};
 use printer::Printer;
 use reqwest::Url;
 use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
-use arguments::*;
+use arguments::{
+    parse_args, Arguments, CodesVerification, RangeSizeVerification,
+};
 
 fn main() {
     env_logger::init();
