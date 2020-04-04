@@ -23,12 +23,12 @@ use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
 use arguments::{
-    parse_args, Arguments, CodesVerification, RangeSizeVerification,
+    Arguments, CodesVerification, RangeSizeVerification,
 };
 
 fn main() {
     env_logger::init();
-    let args = parse_args();
+    let args = Arguments::parse_args();
 
     let wordlist =
         File::open(args.wordlist()).expect("Error opening wordlist file");
