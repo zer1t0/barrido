@@ -1,7 +1,7 @@
 use crate::discoverer::communication::{
     UrlMessage, UrlSender, UrlsMessage, UrlsReceiver, WaitMutex,
 };
-use crossbeam_channel::*;
+use crossbeam_channel::{TryRecvError, RecvError};
 use reqwest::Url;
 use std::collections::HashMap;
 use std::fs::File;
@@ -46,7 +46,7 @@ impl PathProvider {
         loop {
             match file_paths.next() {
                 Some(line) => {
-                    let path = line.unwrap();
+                    let path = line.expect("PathDiscoverer: error unwrapping line");
                     for base_url in base_urls.iter() {
                         self.send_path(base_url, &path);
                         if let Err(_) = self.try_receive_from_scraper() {
