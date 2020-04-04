@@ -1,5 +1,5 @@
 use super::discoverer::http::HttpOptions;
-use clap::*;
+use clap::{App, Arg, ArgMatches, Values};
 use getset::Getters;
 use regex::Regex;
 use reqwest::Proxy;
@@ -420,7 +420,7 @@ impl<'a> ArgumentsBuilder<'a> {
                         };
                         (min_size, max_size)
                     }
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
 
                 ranges.push(range);
