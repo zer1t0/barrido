@@ -91,10 +91,10 @@ pub fn args() -> App<'static, 'static> {
                 .help("Show the discovered paths with the response code"),
         )
         .arg(
-            Arg::with_name("body-length")
-                .long("body-length")
+            Arg::with_name("size")
+                .long("size")
                 .short("l")
-                .help("Show the discovered paths with the response code"),
+                .help("Show the size of the response"),
         )
         .arg(
             Arg::with_name("progress")

@@ -35,7 +35,7 @@ pub struct Arguments {
     size_range_verification: Option<RangeSizeVerification>,
     user_agent: String,
     show_status: bool,
-    show_body_length: bool,
+    show_size: bool,
     show_progress: bool,
     use_scraper: bool,
     follow_redirects: bool,

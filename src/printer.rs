@@ -3,7 +3,7 @@ use reqwest::Url;
 pub struct Printer {
     verbosity: u64,
     show_status: bool,
-    show_body_length: bool,
+    show_size: bool,
     show_progress: bool,
     expand_path: bool,
     cleaner_str: &'static str,
@@ -15,7 +15,7 @@ impl Printer {
     pub fn new(
         verbosity: u64,
         show_status: bool,
-        show_body_length: bool,
+        show_size: bool,
         show_progress: bool,
         expand_path: bool,
     ) -> Self {
@@ -29,7 +29,7 @@ impl Printer {
         return Self {
             verbosity,
             show_status,
-            show_body_length,
+            show_size,
             show_progress,
             expand_path,
             cleaner_str,
@@ -48,7 +48,7 @@ impl Printer {
         if self.show_status {
             line += format!(" {}", status).as_str();
         }
-        if self.show_body_length {
+        if self.show_size {
             line += format!(" {}", body_length).as_str();
         }
 

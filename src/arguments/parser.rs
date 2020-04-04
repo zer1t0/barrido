@@ -30,7 +30,7 @@ impl<'a> ArgumentsParser<'a> {
             .size_range_verification(self.parse_range_sizes_verification())
             .show_status(self.is_present("status"))
             .show_progress(self.is_present("progress"))
-            .show_body_length(self.is_present("body-length"))
+            .show_size(self.is_present("size"))
             .threads(threads)
             .timeout(self.timeout())
             .urls(self.value_of("url").unwrap().to_string())

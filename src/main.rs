@@ -57,7 +57,7 @@ fn main() {
     let printer = Printer::new(
         *args.verbosity(),
         *args.show_status(),
-        *args.show_body_length(),
+        *args.show_size(),
         *args.show_progress(),
         *args.expand_path(),
     );
