@@ -1,16 +1,4 @@
-use crossbeam_channel::{unbounded, Receiver, Sender};
-use getset::Getters;
+use super::channel::Channel;
 
-#[derive(Getters)]
-#[getset(get = "pub")]
-pub struct EndChannel {
-    receiver: Receiver<()>,
-    sender: Sender<()>,
-}
+pub type EndChannel = Channel<()>;
 
-impl Default for EndChannel {
-    fn default() -> Self {
-        let (sender, receiver) = unbounded::<()>();
-        return Self { sender, receiver };
-    }
-}

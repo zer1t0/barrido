@@ -1,23 +1,9 @@
-use crossbeam_channel::{bounded, Receiver, Sender};
-use getset::Getters;
 use reqwest::Url;
+use super::channel::{Channel, Receiver, Sender};
 
 pub type UrlReceiver = Receiver<UrlMessage>;
 pub type UrlSender = Sender<UrlMessage>;
-
-#[derive(Getters)]
-#[getset(get = "pub")]
-pub struct UrlChannel {
-    sender: UrlSender,
-    receiver: UrlReceiver,
-}
-
-impl UrlChannel {
-    pub fn new(size: usize) -> Self {
-        let (sender, receiver) = bounded::<UrlMessage>(size);
-        return Self { sender, receiver };
-    }
-}
+pub type UrlChannel = Channel<UrlMessage>;
 
 pub struct UrlMessage {
     pub base_url: Url,

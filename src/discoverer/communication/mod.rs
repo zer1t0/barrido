@@ -1,3 +1,4 @@
+mod channel;
 mod end_channel;
 mod response_channel;
 mod result_channel;
