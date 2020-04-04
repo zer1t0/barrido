@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Lines};
 
-use log::info;
+use log::{info,trace};
 
 pub struct PathProvider {
     url_sender: UrlSender,
@@ -33,9 +33,11 @@ impl PathProvider {
     pub fn run(
         self,
         base_urls: Vec<Url>,
-        paths_reader: BufReader<std::fs::File>,
+        paths_reader: BufReader<File>,
     ) {
+        info!("Init");
         self.receive_from_file_and_scraper(&base_urls, paths_reader.lines());
+        info!("Finish");
     }
 
     fn receive_from_file_and_scraper(
@@ -55,13 +57,16 @@ impl PathProvider {
                         }
                     }
                 }
-                None => return self.receive_only_from_scraper(),
+                None => {
+                    info!("Paths in file finished");
+                    return self.receive_only_from_scraper();
+                }
             }
         }
     }
 
     fn try_receive_from_scraper(&mut self) -> Result<(), ()> {
-        match self.scraper_urls_receiver.try_recv() {
+        match self.try_recv_scraper() {
             Ok(paths) => self.send_urls(paths),
             Err(channel_error) => match channel_error {
                 TryRecvError::Empty => {}
@@ -73,19 +78,26 @@ impl PathProvider {
 
     fn receive_only_from_scraper(mut self) {
         loop {
-            match self.wait_for_scraper_paths() {
+            match self.recv_scraper() {
                 Ok(paths) => self.send_urls(paths),
-                Err(_) => break,
+                Err(_) => {
+                    info!("No more paths from the scraper");
+                    break;
+                }
             }
         }
     }
 
-    fn wait_for_scraper_paths(&self) -> Result<UrlsMessage, RecvError> {
+    fn recv_scraper(&self) -> Result<UrlsMessage, RecvError> {
         let _block = self
             .wait_mutex
             .lock()
             .expect("PathProvider: Error locking mutex");
         return self.scraper_urls_receiver.recv();
+    }
+
+    fn try_recv_scraper(&self) -> Result<UrlsMessage, TryRecvError> {
+        return self.scraper_urls_receiver.try_recv();
     }
 
     fn receive_only_from_file(
@@ -99,6 +111,7 @@ impl PathProvider {
                 self.send_path(base_url, &path);
             }
         }
+        info!("Paths in file finished");
     }
 
     fn send_path(&mut self, base_url: &Url, path: &str) {
@@ -116,7 +129,7 @@ impl PathProvider {
         if !self.dispatched_paths.contains_key(url.as_str()) {
             self.dispatched_paths.insert(String::from(url.as_str()), ());
 
-            info!("send {}", url);
+            trace!("Send url {}", url);
             let url_message = UrlMessage::new(base_url.clone(), url);
 
             self.url_sender

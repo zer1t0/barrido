@@ -19,6 +19,7 @@ impl Default for ResponseChannel {
     }
 }
 
+#[derive(Debug)]
 pub struct ResponseMessage {
     pub base_url: Url,
     pub response: reqwest::Result<Response>,

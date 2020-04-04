@@ -3,6 +3,8 @@ use std::thread::sleep;
 use std::time::Duration;
 use threadpool::ThreadPool;
 
+use log::{debug, info};
+
 pub struct EndChecker {
     requesters_wait_mutexes: Vec<WaitMutex>,
     requesters_pool: ThreadPool,
@@ -37,8 +39,10 @@ impl EndChecker {
     }
 
     pub fn run(&mut self) {
+        info!("Init");
         self.wait_for_end();
         self.send_end();
+        info!("Finish");
     }
 
     fn wait_for_end(&mut self) {
@@ -61,6 +65,7 @@ impl EndChecker {
             }
 
             self.round_counter += 1;
+            debug!("No activity detected");
             if self.round_counter == 10 {
                 break;
             }
@@ -112,6 +117,7 @@ impl EndChecker {
     }
 
     fn send_end(&self) {
+        info!("Send end");
         self.end_sender
             .send(())
             .expect("EndChecker: error sending end");

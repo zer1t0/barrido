@@ -38,15 +38,17 @@ impl ResponseHandler {
     }
 
     pub fn run(&self) {
+        info!("{} Init", self.id);
         loop {
             match self.recv() {
                 Ok(result) => self.handle_http_result(result),
                 Err(_) => {
-                    info!("Response channel was closed");
+                    info!("{} Response channel was closed", self.id);
                     break;
                 }
             }
         }
+        info!("{} Finish", self.id);
     }
 
     fn recv(&self) -> Result<ResponseMessage, RecvError> {
