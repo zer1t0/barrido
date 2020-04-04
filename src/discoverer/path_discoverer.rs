@@ -5,15 +5,19 @@ use std::sync::Arc;
 use std::thread;
 use threadpool::ThreadPool;
 
+use crate::discoverer::actors::{
+    EndChecker, PathProvider, Requester, ResponseHandler,
+};
 use crate::discoverer::communication::{
     new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
     ResultChannel, ResultReceiver, UrlChannel, UrlsChannel, WaitMutex,
 };
-use crate::discoverer::scraper::*;
+use crate::discoverer::http::HttpOptions;
+use crate::discoverer::scraper::{
+    EmptyScraperManager, HtmlScraperManager, ScraperManager,
+};
 use crate::discoverer::verificator;
-use crate::discoverer::verificator::*;
-use crate::discoverer::actors::{Requester, EndChecker, PathProvider, ResponseHandler};
-use crate::discoverer::http::{HttpOptions};
+use crate::discoverer::verificator::Verificator;
 
 pub struct PathDiscovererBuilder {
     base_urls: Vec<Url>,
