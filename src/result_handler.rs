@@ -1,7 +1,7 @@
 use log::info;
 use std::time::{Duration, Instant};
 
-use crate::discoverer::communication::{ResultReceiver, ResponseInfo};
+use crate::discoverer::communication::result_channel::{ResultReceiver, Answer, Error};
 use crate::printer::Printer;
 
 pub struct ResultHandler {
@@ -11,7 +11,7 @@ pub struct ResultHandler {
     progress_scheluder: crossbeam_channel::Receiver<Instant>,
     received_count: usize,
     max_requests_count: usize,
-    results: Vec<ResponseInfo>,
+    results: Vec<Answer>,
     printer: Printer,
 }
 
@@ -22,7 +22,7 @@ impl ResultHandler {
         signal_receiver: crossbeam_channel::Receiver<()>,
         max_requests_count: usize,
         printer: Printer,
-    ) -> Vec<ResponseInfo> {
+    ) -> Vec<Answer> {
         let mut handler = Self::new(
             result_receiver,
             end_receiver,
@@ -74,24 +74,10 @@ impl ResultHandler {
                     info!("signal received");
                     break;
                 }
-                recv(self.result_receiver.valid_responses()) -> result => {
+                recv(self.result_receiver) -> result => {
                     info!("valid response received");
                     match result {
                         Ok(ok_result) => self.handle_result(ok_result),
-                        _ => {}
-                    }
-                }
-                recv(self.result_receiver.invalid_responses()) -> result => {
-                    info!("invalid response received");
-                    match result {
-                        Ok(_) => self.handle_invalid_response(),
-                        _ => {}
-                    }
-                }
-                recv(self.result_receiver.errors()) -> error => {
-                    info!("error received");
-                    match error {
-                        Ok(request_error) => self.handle_error(request_error),
                         _ => {}
                     }
                 }
@@ -102,23 +88,34 @@ impl ResultHandler {
         self.printer.print_clean();
     }
 
-    fn handle_result(&mut self, response_info: ResponseInfo) {
+    fn handle_result(&mut self, result: Result<Answer, Error>) {
+        self.received_count += 1;
+        match result {
+            Ok(answer) => self.handle_answer(answer),
+            Err(error) => self.handle_error(error)
+        }
+    }
+
+    fn handle_answer(&mut self, answer: Answer) {
+        self.received_count += 1;
+        match answer.valid() {
+            true => self.handle_valid(answer),
+            false => {}
+        }
+        
+    }
+
+    fn handle_valid(&mut self, answer: Answer) {
         self.printer.print_path(
-            response_info.url(),
-            response_info.status(),
-            response_info.body_length(),
+            answer.url(),
+            *answer.status(),
+            *answer.size(),
         );
 
-        self.results.push(response_info);
-        self.received_count += 1;
+        self.results.push(answer);
     }
 
-    fn handle_invalid_response(&mut self) {
-        self.received_count += 1;
-    }
-
-    fn handle_error(&mut self, error: reqwest::Error) {
+    fn handle_error(&mut self, error: Error) {
         self.printer.print_error(error);
-        self.received_count += 1;
     }
 }

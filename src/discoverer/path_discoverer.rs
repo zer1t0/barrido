@@ -10,8 +10,9 @@ use crate::discoverer::actors::{
 };
 use crate::discoverer::communication::{
     new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
-    ResultChannel, ResultReceiver, UrlChannel, UrlsChannel, WaitMutex,
+    UrlChannel, UrlsChannel, WaitMutex,
 };
+use crate::discoverer::communication::result_channel::{ResultChannel, ResultReceiver};
 use crate::discoverer::http::HttpOptions;
 use crate::discoverer::scraper::{
     EmptyScraperManager, HtmlScraperManager, ScraperManager,

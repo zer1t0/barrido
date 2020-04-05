@@ -1,96 +1,46 @@
-use crate::discoverer::communication::ResponseInfo;
-use crossbeam_channel::{Sender, Receiver, unbounded};
 use reqwest;
+use reqwest::Url;
+use super::channel::{Channel, Sender, Receiver};
+use crate::discoverer::http::Response;
 use getset::Getters;
 
-#[derive(Getters)]
+pub type ResultReceiver = Receiver<Result<Answer, Error>>;
+pub type ResultSender = Sender<Result<Answer, Error>>;
+pub type ResultChannel = Channel<Result<Answer, Error>>;
+
+#[derive(Debug, Getters)]
 #[getset (get = "pub")]
-pub struct ResultChannel {
-    sender: ResultSender,
-    receiver: ResultReceiver,
+pub struct Answer {
+    valid: bool,
+    url: Url,
+
+    // Should be the same than url,
+    // except in case of redirection
+    request_url: Url,
+    status: u16,
+    size: usize,
 }
 
-impl Default for ResultChannel {
-    fn default() -> Self {
-        let (valid_response_sender, valid_response_receiver) =
-            unbounded::<ResponseInfo>();
-        let (invalid_response_sender, invalid_response_receiver) =
-            unbounded::<ResponseInfo>();
-        let (error_sender, error_receiver) = unbounded::<reqwest::Error>();
 
-        let sender = ResultSender::new(
-            valid_response_sender,
-            invalid_response_sender,
-            error_sender,
-        );
-
-        let receiver = ResultReceiver::new(
-            valid_response_receiver,
-            invalid_response_receiver,
-            error_receiver,
-        );
-        return Self { sender, receiver };
-    }
-
-}
-
-#[derive(Clone)]
-pub struct ResultSender {
-    valid_responses: Sender<ResponseInfo>,
-    invalid_responses: Sender<ResponseInfo>,
-    errors: Sender<reqwest::Error>,
-}
-
-impl ResultSender {
-    pub fn new(
-        valid_responses: Sender<ResponseInfo>,
-        invalid_responses: Sender<ResponseInfo>,
-        errors: Sender<reqwest::Error>,
-    ) -> Self {
+impl Answer {
+    pub fn new(valid: bool, request_url: Url, response: Response) -> Self {
         return Self {
-            valid_responses,
-            invalid_responses,
-            errors,
-        };
+            valid,
+            url: response.url().clone(),
+            request_url,
+            status: response.status(),
+            size: response.body().len()
+        }
     }
 
-    pub fn send_valid_response(&self, response: ResponseInfo) {
-        self.valid_responses
-            .send(response)
-            .expect("ResultSender: error sending valid response");
+    pub fn new_valid(request_url: Url, response: Response) -> Self {
+        return Self::new(true, request_url, response);
     }
 
-    pub fn send_invalid_response(&self, response: ResponseInfo) {
-        self.invalid_responses
-            .send(response)
-            .expect("ResultSender: error sending invalid response");
-    }
-
-    pub fn send_error(&self, error: reqwest::Error) {
-        self.errors
-            .send(error)
-            .expect("ResultSender: error sending error");
+    pub fn new_invalid(request_url: Url, response: Response) -> Self {
+        return Self::new(false, request_url, response);
     }
 }
 
-#[derive(Clone, Getters)]
-#[getset (get = "pub")]
-pub struct ResultReceiver {
-    valid_responses: Receiver<ResponseInfo>,
-    invalid_responses: Receiver<ResponseInfo>,
-    errors: Receiver<reqwest::Error>,
-}
+pub type Error = reqwest::Error;
 
-impl ResultReceiver {
-    fn new(
-        valid_responses: Receiver<ResponseInfo>,
-        invalid_responses: Receiver<ResponseInfo>,
-        errors: Receiver<reqwest::Error>,
-    ) -> Self {
-        return Self {
-            valid_responses,
-            invalid_responses,
-            errors,
-        };
-    }
-}

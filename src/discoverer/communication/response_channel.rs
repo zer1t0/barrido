@@ -8,11 +8,20 @@ pub type ResponseChannel = Channel<ResponseMessage>;
 #[derive(Debug)]
 pub struct ResponseMessage {
     pub base_url: Url,
+    pub request_url: Url,
     pub response: reqwest::Result<Response>,
 }
 
 impl ResponseMessage {
-    pub fn new(base_url: Url, response: reqwest::Result<Response>) -> Self {
-        return Self { base_url, response };
+    pub fn new(
+        base_url: Url,
+        request_url: Url,
+        response: reqwest::Result<Response>,
+    ) -> Self {
+        return Self {
+            base_url,
+            request_url,
+            response,
+        };
     }
 }

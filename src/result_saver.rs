@@ -1,4 +1,4 @@
-use crate::discoverer;
+use crate::discoverer::communication::result_channel::Answer;
 use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
@@ -7,15 +7,15 @@ pub struct JsonResultSaver {}
 
 impl JsonResultSaver {
     pub fn save_results(
-        results: &Vec<discoverer::communication::ResponseInfo>,
+        results: &Vec<Answer>,
         out_file_path: &String,
     ) {
         let mut json_results: Vec<JsonResponseInfo> =
             Vec::with_capacity(results.len());
-        for response_info in results.iter() {
+        for answer in results.iter() {
             json_results.push(JsonResponseInfo {
-                path: response_info.url().path().to_string(),
-                status: response_info.status(),
+                path: answer.url().path().to_string(),
+                status: *answer.status(),
             })
         }
 

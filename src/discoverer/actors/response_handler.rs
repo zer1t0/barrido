@@ -1,13 +1,18 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use crate::discoverer::communication::{ResultSender, ResponseReceiver, ResponseMessage, WaitMutex, ResponseInfo};
+use crate::discoverer::communication::result_channel::{
+    Answer, Error, ResultSender,
+};
+use crate::discoverer::communication::{
+    ResponseMessage, ResponseReceiver, WaitMutex,
+};
 use crate::discoverer::http::Response;
 use crate::discoverer::scraper::ScraperManager;
 use crate::discoverer::verificator::Verificator;
 use reqwest::Url;
 
-use log::{info, debug, trace};
+use log::{debug, info, trace};
 
 pub struct ResponseHandler {
     response_receiver: ResponseReceiver,
@@ -63,51 +68,61 @@ impl ResponseHandler {
 
     fn handle_http_result(&self, message: ResponseMessage) {
         let base_url = message.base_url;
+        let request_url = message.request_url;
         match message.response {
-            Ok(response) => self.process_response(base_url, response),
+            Ok(response) => {
+                self.process_response(base_url, request_url, response)
+            }
             Err(err) => self.send_error(err),
         }
     }
 
-    fn process_response(&self, base_url: Url, response: reqwest::Response) {
+    fn process_response(
+        &self,
+        base_url: Url,
+        request_url: Url,
+        response: reqwest::Response,
+    ) {
         info!("Process response for {}", response.url());
         let response = Response::from(response);
-        if self.is_valid_response(&response) {
-            self.process_valid_response(base_url, response);
+        if self.is_valid(&response) {
+            self.process_valid(base_url, request_url, response);
         } else {
-            self.process_invalid_response(response);
+            self.process_invalid(request_url, response);
         }
     }
 
-    fn is_valid_response(&self, response: &Response) -> bool {
+    fn is_valid(&self, response: &Response) -> bool {
         return self.verificator.is_valid_response(response);
     }
 
-    fn process_valid_response(&self, base_url: Url, response: Response) {
+    fn process_valid(
+        &self,
+        base_url: Url,
+        request_url: Url,
+        response: Response,
+    ) {
         info!("{}: valid response for {}", self.id, response.url());
-
         self.scrap(base_url, &response);
-        self.send_valid(ResponseInfo::new(response));
+
+        let answer = Answer::new_valid(request_url, response);
+        self.send_answer(answer);
     }
 
-    fn process_invalid_response(&self, response: Response) {
+    fn process_invalid(&self, url: Url, response: Response) {
         info!("{}: invalid response for {}", self.id, response.url());
-        self.send_invalid(ResponseInfo::new(response));
+        let answer = Answer::new_invalid(url, response);
+        self.send_answer(answer);
     }
 
-    fn send_error(&self, err: reqwest::Error) {
+    fn send_error(&self, err: Error) {
         debug!("Send error: {:?}", err);
-        self.result_sender.send_error(err);
+        self.result_sender.send(Err(err));
     }
 
-    fn send_invalid(&self, response_info: ResponseInfo){
-        debug!("Send invalid response: {:?}", response_info);
-        self.result_sender.send_invalid_response(response_info);
-    }
-
-    fn send_valid(&self, response_info: ResponseInfo) {
-        debug!("Send valid response: {:?}", response_info);
-        self.result_sender.send_valid_response(response_info);
+    fn send_answer(&self, answer: Answer) {
+        debug!("Send answer: {:?}", answer);
+        self.result_sender.send(Ok(answer));
     }
 
     fn scrap(&self, base_url: Url, response: &Response) {
