@@ -117,12 +117,18 @@ impl ResponseHandler {
 
     fn send_error(&self, err: Error) {
         debug!("Send error: {:?}", err);
-        self.result_sender.send(Err(err));
+        self.send(Err(err));
     }
 
     fn send_answer(&self, answer: Answer) {
         debug!("Send answer: {:?}", answer);
-        self.result_sender.send(Ok(answer));
+        self.send(Ok(answer));
+    }
+
+    fn send(&self, result: Result<Answer, Error>) {
+        if let Err(error) = self.result_sender.send(result) {
+            panic!("Error sending result: {:?}", error);
+        }
     }
 
     fn scrap(&self, base_url: Url, response: &Response) {
