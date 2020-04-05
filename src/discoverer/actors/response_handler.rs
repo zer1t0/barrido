@@ -68,10 +68,9 @@ impl ResponseHandler {
 
     fn handle_http_result(&self, message: ResponseMessage) {
         let base_url = message.base_url;
-        let request_url = message.request_url;
         match message.response {
             Ok(response) => {
-                self.process_response(base_url, request_url, response)
+                self.process_response(base_url, response)
             }
             Err(err) => self.send_error(err),
         }
@@ -80,15 +79,14 @@ impl ResponseHandler {
     fn process_response(
         &self,
         base_url: Url,
-        request_url: Url,
         response: reqwest::Response,
     ) {
         info!("Process response for {}", response.url());
         let response = Response::from(response);
         if self.is_valid(&response) {
-            self.process_valid(base_url, request_url, response);
+            self.process_valid(base_url, response);
         } else {
-            self.process_invalid(request_url, response);
+            self.process_invalid(response);
         }
     }
 
@@ -99,19 +97,18 @@ impl ResponseHandler {
     fn process_valid(
         &self,
         base_url: Url,
-        request_url: Url,
         response: Response,
     ) {
         info!("{}: valid response for {}", self.id, response.url());
         self.scrap(base_url, &response);
 
-        let answer = Answer::new_valid(request_url, response);
+        let answer = Answer::new_valid(response);
         self.send_answer(answer);
     }
 
-    fn process_invalid(&self, url: Url, response: Response) {
+    fn process_invalid(&self, response: Response) {
         info!("{}: invalid response for {}", self.id, response.url());
-        let answer = Answer::new_invalid(url, response);
+        let answer = Answer::new_invalid(response);
         self.send_answer(answer);
     }
 

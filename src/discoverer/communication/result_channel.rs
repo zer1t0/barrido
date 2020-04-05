@@ -13,32 +13,27 @@ pub type ResultChannel = Channel<Result<Answer, Error>>;
 pub struct Answer {
     valid: bool,
     url: Url,
-
-    // Should be the same than url,
-    // except in case of redirection
-    request_url: Url,
     status: u16,
     size: usize,
 }
 
 
 impl Answer {
-    pub fn new(valid: bool, request_url: Url, response: Response) -> Self {
+    pub fn new(valid: bool, response: Response) -> Self {
         return Self {
             valid,
             url: response.url().clone(),
-            request_url,
             status: response.status(),
             size: response.body().len()
         }
     }
 
-    pub fn new_valid(request_url: Url, response: Response) -> Self {
-        return Self::new(true, request_url, response);
+    pub fn new_valid(response: Response) -> Self {
+        return Self::new(true, response);
     }
 
-    pub fn new_invalid(request_url: Url, response: Response) -> Self {
-        return Self::new(false, request_url, response);
+    pub fn new_invalid(response: Response) -> Self {
+        return Self::new(false, response);
     }
 }
 

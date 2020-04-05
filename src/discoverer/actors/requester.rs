@@ -47,11 +47,10 @@ impl Requester {
     }
 
     fn get_and_send(&self, url_message: UrlMessage) {
-        let response = self.get(url_message.url.clone());
+        let response = self.get(url_message.url);
 
         self.send_response(ResponseMessage::new(
             url_message.base_url,
-            url_message.url,
             response,
         ));
     }
