@@ -9,14 +9,14 @@ use std::io::{BufRead, BufReader, Lines};
 
 use log::{info,trace};
 
-pub struct PathProvider {
+pub struct UrlAggregator {
     url_sender: UrlSender,
     scraper_urls_receiver: UrlsReceiver,
     dispatched_paths: HashMap<String, ()>,
     wait_mutex: WaitMutex,
 }
 
-impl PathProvider {
+impl UrlAggregator {
     pub fn new(
         url_sender: UrlSender,
         scraper_urls_receiver: UrlsReceiver,

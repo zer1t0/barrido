@@ -6,7 +6,7 @@ use std::thread;
 use threadpool::ThreadPool;
 
 use crate::discoverer::actors::{
-    EndChecker, PathProvider, Requester, ResponseHandler,
+    EndChecker, UrlAggregator, Requester, ResponseHandler,
 };
 use crate::discoverer::communication::{
     new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
@@ -235,7 +235,7 @@ impl PathDiscovererSpawner {
         let new_urls_receiver = self.urls_channel.receiver().clone();
         let base_urls = self.base_urls.clone();
         self.paths_provider_pool.execute(move || {
-            PathProvider::new(url_sender, new_urls_receiver, wait_mutex)
+            UrlAggregator::new(url_sender, new_urls_receiver, wait_mutex)
                 .run(base_urls, paths_reader);
         });
     }
