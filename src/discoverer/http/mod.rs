@@ -3,3 +3,6 @@ mod response;
 
 pub use http_client::HttpOptions;
 pub use response::{Response, ContentType};
+
+
+pub use reqwest::Url;
