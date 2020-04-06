@@ -1,18 +1,18 @@
 use crossbeam_channel::Receiver;
-use reqwest::Url;
-use std::io::BufReader;
 use std::sync::Arc;
 use std::thread;
 use threadpool::ThreadPool;
 
 use crate::discoverer::actors::{
-    EndChecker, UrlAggregator, Requester, ResponseHandler,
+    EndChecker, Requester, ResponseHandler, UrlAggregator, UrlPathProvider,
+};
+use crate::discoverer::communication::result_channel::{
+    ResultChannel, ResultReceiver,
 };
 use crate::discoverer::communication::{
     new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
     UrlChannel, UrlsChannel, WaitMutex,
 };
-use crate::discoverer::communication::result_channel::{ResultChannel, ResultReceiver};
 use crate::discoverer::http::HttpOptions;
 use crate::discoverer::scraper::{
     EmptyScraperManager, HtmlScraperManager, ScraperManager,
@@ -20,9 +20,8 @@ use crate::discoverer::scraper::{
 use crate::discoverer::verificator;
 use crate::discoverer::verificator::Verificator;
 
-pub struct PathDiscovererBuilder {
-    base_urls: Vec<Url>,
-    paths_reader: BufReader<std::fs::File>,
+pub struct DiscovererBuilder {
+    paths_provider: UrlPathProvider,
     requesters_count: usize,
     response_handlers_count: usize,
     http_options: HttpOptions,
@@ -30,14 +29,10 @@ pub struct PathDiscovererBuilder {
     use_scraper: bool,
 }
 
-impl PathDiscovererBuilder {
-    pub fn new(
-        base_urls: Vec<Url>,
-        paths_reader: BufReader<std::fs::File>,
-    ) -> Self {
+impl DiscovererBuilder {
+    pub fn new(paths_provider: UrlPathProvider) -> Self {
         return Self {
-            base_urls,
-            paths_reader,
+            paths_provider,
             requesters_count: 10,
             response_handlers_count: 10,
             http_options: HttpOptions::default(),
@@ -66,7 +61,7 @@ impl PathDiscovererBuilder {
         return self;
     }
 
-    pub fn spawn(self) -> PathDiscoverer {
+    pub fn spawn(self) -> Discoverer {
         let response_verificator = Arc::new(self.response_verificator);
         let url_client = Arc::new(self.http_options.into());
 
@@ -80,22 +75,22 @@ impl PathDiscovererBuilder {
             self.response_handlers_count,
         );
 
-        return PathDiscovererSpawner::new(
+        return DiscovererSpawner::new(
+            self.paths_provider,
             response_verificator,
             url_client,
-            self.base_urls,
             requesters_pool,
             response_handlers_pool,
             self.use_scraper,
         )
-        .spawn(self.paths_reader);
+        .spawn();
     }
 }
 
-struct PathDiscovererSpawner {
+struct DiscovererSpawner {
+    paths_provider: UrlPathProvider,
     response_verificator: Arc<Verificator>,
     url_client: Arc<reqwest::Client>,
-    base_urls: Vec<Url>,
     requesters_pool: ThreadPool,
     response_handlers_pool: ThreadPool,
     paths_provider_pool: ThreadPool,
@@ -107,11 +102,11 @@ struct PathDiscovererSpawner {
     use_scraper: bool,
 }
 
-impl PathDiscovererSpawner {
+impl DiscovererSpawner {
     fn new(
+        paths_provider: UrlPathProvider,
         response_verificator: Arc<Verificator>,
         url_client: Arc<reqwest::Client>,
-        base_urls: Vec<Url>,
         requesters_pool: ThreadPool,
         response_handlers_pool: ThreadPool,
         use_scraper: bool,
@@ -119,9 +114,9 @@ impl PathDiscovererSpawner {
         let max_paths_count = requesters_pool.max_count() * 4;
 
         return Self {
+            paths_provider,
             response_verificator,
             url_client,
-            base_urls,
             requesters_pool,
             response_handlers_pool,
             paths_provider_pool: ThreadPool::with_name(
@@ -137,10 +132,7 @@ impl PathDiscovererSpawner {
         };
     }
 
-    fn spawn(
-        mut self,
-        paths_reader: BufReader<std::fs::File>,
-    ) -> PathDiscoverer {
+    fn spawn(mut self) -> Discoverer {
         let response_handlers_wait_mutexes =
             new_wait_mutex_vec(self.response_handlers_pool.max_count());
 
@@ -151,10 +143,7 @@ impl PathDiscovererSpawner {
 
         self.spawn_response_handlers(&response_handlers_wait_mutexes);
         self.spawn_requesters(&requesters_wait_mutexes);
-        self.spawn_path_provider(
-            paths_reader,
-            paths_provider_wait_mutex.clone(),
-        );
+        self.spawn_url_aggregator(paths_provider_wait_mutex.clone());
 
         Self::spawn_end_checker(
             requesters_wait_mutexes,
@@ -166,7 +155,7 @@ impl PathDiscovererSpawner {
             self.end_channel.sender().clone(),
         );
 
-        return PathDiscoverer::new(self.result_channel, self.end_channel);
+        return Discoverer::new(self.result_channel, self.end_channel);
     }
 
     fn spawn_response_handlers(&mut self, wait_mutexes: &Vec<WaitMutex>) {
@@ -226,17 +215,14 @@ impl PathDiscovererSpawner {
         });
     }
 
-    fn spawn_path_provider(
-        &self,
-        paths_reader: BufReader<std::fs::File>,
-        wait_mutex: WaitMutex,
-    ) {
+    fn spawn_url_aggregator(&self, wait_mutex: WaitMutex) {
         let url_sender = self.url_channel.sender().clone();
-        let new_urls_receiver = self.urls_channel.receiver().clone();
-        let base_urls = self.base_urls.clone();
+        let scraper_receiver = self.urls_channel.receiver().clone();
+        let paths_provider_receiver = self.paths_provider.receiver().clone();
+        
         self.paths_provider_pool.execute(move || {
-            UrlAggregator::new(url_sender, new_urls_receiver, wait_mutex)
-                .run(base_urls, paths_reader);
+            let receivers = vec![paths_provider_receiver, scraper_receiver];
+            UrlAggregator::new(url_sender, receivers, wait_mutex).run();
         });
     }
 
@@ -264,12 +250,12 @@ impl PathDiscovererSpawner {
     }
 }
 
-pub struct PathDiscoverer {
+pub struct Discoverer {
     result_channel: ResultChannel,
     end_channel: EndChannel,
 }
 
-impl PathDiscoverer {
+impl Discoverer {
     fn new(result_channel: ResultChannel, end_channel: EndChannel) -> Self {
         return Self {
             result_channel,
