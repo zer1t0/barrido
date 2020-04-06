@@ -12,11 +12,12 @@ use std::path::Path;
 use crossbeam_channel;
 
 use discoverer::http::HttpOptions;
-use discoverer::path_discoverer::{PathDiscovererBuilder};
+use discoverer::{DiscovererBuilder, UrlPathProvider};
 use discoverer::verificator::{
     CodesVerificator, OrVerificator, RegexVerificator, SizeVerificator,
     TrueVerificator, Verificator,
 };
+
 use printer::Printer;
 use reqwest::Url;
 use result_handler::ResultHandler;
@@ -34,6 +35,7 @@ fn main() {
         File::open(args.wordlist()).expect("Error opening wordlist file");
 
     let paths_reader = BufReader::new(wordlist);
+    let paths = paths_reader.lines().map(|l| l.expect("error parsing line")).collect();
 
     let http_options: HttpOptions = args.clone().into();
 
@@ -41,9 +43,12 @@ fn main() {
 
     let base_urls = parse_urls(args.urls());
 
-    let max_requests_count = get_file_lines(args.wordlist()) * base_urls.len();
+    let max_requests_count = paths.len() * base_urls.len();
 
-    let discoverer = PathDiscovererBuilder::new(base_urls, paths_reader)
+    let paths_provider = UrlPathProvider::new(base_urls, paths);
+
+
+    let discoverer = DiscovererBuilder::new(paths_provider)
         .requesters_count(*args.threads())
         .verificator(verificator)
         .http_options(http_options)
