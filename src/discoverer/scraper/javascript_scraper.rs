@@ -1,62 +1,11 @@
-use crate::discoverer::http::Response;
 use regex::{CaptureMatches, Regex};
-use reqwest::Url;
 
-pub struct JsScraper {
-    paths_scraper: JsPathsScraper,
-}
-
-impl JsScraper {
-    pub fn new() -> Self {
-        return Self {
-            paths_scraper: JsPathsScraper::new(),
-        };
-    }
-
-    pub fn scrap(&self, response: &Response) -> Vec<Url> {
-        let body = response.body();
-        return self.scrap_in_string(body, response.url());
-    }
-
-    fn scrap_in_string(&self, js_code: &str, current_url: &Url) -> Vec<Url> {
-        let mut urls = Vec::new();
-
-        for path in self.paths_scraper.scrap(&js_code) {
-            self.clean_and_add_path(current_url, &mut urls, &path);
-        }
-        return urls;
-    }
-
-    fn clean_and_add_path(
-        &self,
-        current_url: &Url,
-        urls: &mut Vec<Url>,
-        path: &str,
-    ) {
-        match current_url.join(&path) {
-            Ok(mut url) => {
-                url.set_fragment(None);
-                url.set_query(None);
-                if !urls.contains(&url) {
-                    urls.push(url);
-                }
-            }
-            Err(error) => {
-                panic!(
-                    "Error joining url error({}) url({}) path({})",
-                    error, current_url, path
-                );
-            }
-        }
-    }
-}
-
-struct JsPathsScraper {
+pub struct JsPathsScraper {
     paths_regex: Regex,
 }
 
 impl<'r, 't> JsPathsScraper {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let path_segment_regex = r#"/[\dA-Za-z\-_~\.%]+(/[\dA-Za-z\-_~\.%]*)*"#;
         let query_segment_regex = r#"\?([\dA-Za-z\-_~\.%=&]*)"#;
         let fragment_segment_regex = r#"#([\dA-Za-z\-_~\.%=&]*)"#;
@@ -70,14 +19,14 @@ impl<'r, 't> JsPathsScraper {
         };
     }
 
-    fn scrap(&'r self, js_body: &'t str) -> JsPathsScraperIter<'r, 't> {
+    pub fn scrap(&'r self, js_body: &'t str) -> JsPathsScraperIter<'r, 't> {
         return JsPathsScraperIter::new(
             self.paths_regex.captures_iter(js_body),
         );
     }
 }
 
-struct JsPathsScraperIter<'r, 't> {
+pub struct JsPathsScraperIter<'r, 't> {
     matches: CaptureMatches<'r, 't>,
 }
 
