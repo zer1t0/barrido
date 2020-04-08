@@ -10,7 +10,12 @@ pub struct Channel<T> {
 }
 
 impl<T> Channel<T> {
-    pub fn new(capacity: usize) -> Self {
+    pub fn new() -> Self {
+        let (sender, receiver) = unbounded::<T>();
+        return Self { sender, receiver };
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
         let (sender, receiver) = bounded::<T>(capacity);
         return Self { sender, receiver };
     }
@@ -18,7 +23,6 @@ impl<T> Channel<T> {
 
 impl<T> Default for Channel<T> {
     fn default() -> Self {
-        let (sender, receiver) = unbounded::<T>();
-        return Self { sender, receiver };
+        return Self::new();
     }
 }
