@@ -3,10 +3,10 @@ pub use crossbeam_channel::{Receiver, Sender};
 use getset::Getters;
 
 #[derive(Getters)]
-#[getset(get = "pub")]
+#[getset(get = "pub with_prefix")]
 pub struct Channel<T> {
-    sender: Sender<T>,
-    receiver: Receiver<T>,
+    pub sender: Sender<T>,
+    pub receiver: Receiver<T>,
 }
 
 impl<T> Channel<T> {
