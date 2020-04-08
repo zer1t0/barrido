@@ -1,23 +1,31 @@
 use super::subpaths_scraper::SubPathsScraper;
-use crate::discoverer::communication::{UrlsMessage, UrlsSender};
+use crate::discoverer::communication::{UrlsMessage, UrlsSender, Receiver, Channel};
 use crate::discoverer::http::{Response, Url};
 
 use log::info;
 
-pub trait ScraperManager {
-    fn scrap_response(&self, base_url: Url, response: &Response);
+pub trait ScraperProvider {
+    fn scrap(&self, base_url: Url, response: &Response);
+    fn receiver(&self) -> &Receiver<UrlsMessage>;
 }
 
-pub struct EmptyScraperManager {}
+pub struct EmptyScraperProvider {
+    channel: Channel<UrlsMessage>
+}
 
-impl EmptyScraperManager {
+impl EmptyScraperProvider {
     pub fn new(_: UrlsSender) -> Self {
-        return Self {};
+        let s = Self {channel: Channel::new()};
+        drop(s.channel.sender);
+        return s;
     }
 }
 
-impl ScraperManager for EmptyScraperManager {
-    fn scrap_response(&self, _: Url, _: &Response) {}
+impl ScraperProvider for EmptyScraperProvider {
+    fn scrap(&self, _: Url, _: &Response) {}
+    fn receiver(&self) -> &Receiver<UrlsMessage> {
+        return self.channel.get_receiver();
+    }
 }
 
 pub struct HtmlScraperManager {
