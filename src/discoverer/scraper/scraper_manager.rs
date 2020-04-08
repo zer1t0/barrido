@@ -1,6 +1,6 @@
-use crate::discoverer::http::{Response, Url};
+use super::subpaths_scraper::SubPathsScraper;
 use crate::discoverer::communication::{UrlsMessage, UrlsSender};
-use super::response_scraper::ResponseScraper;
+use crate::discoverer::http::{Response, Url};
 
 use log::info;
 
@@ -21,14 +21,14 @@ impl ScraperManager for EmptyScraperManager {
 }
 
 pub struct HtmlScraperManager {
-    response_scraper: ResponseScraper,
+    subpaths_scraper: SubPathsScraper,
     discovered_paths_sender: UrlsSender,
 }
 
 impl HtmlScraperManager {
     pub fn new(discovered_paths_sender: UrlsSender) -> Self {
         return Self {
-            response_scraper: ResponseScraper::new(),
+            subpaths_scraper: SubPathsScraper::new(),
             discovered_paths_sender,
         };
     }
@@ -41,17 +41,12 @@ impl HtmlScraperManager {
                 .expect("Error sending new path");
         }
     }
-
-    fn is_a_base_url_subpath(&self, base_url: &Url, url: &Url) -> bool {
-        return url.as_str().starts_with(base_url.as_str());
-    }
 }
 
 impl ScraperManager for HtmlScraperManager {
     fn scrap_response(&self, base_url: Url, response: &Response) {
-        let urls = self.response_scraper.scrap(response);
-        let sub_urls = urls.filter(|u| self.is_a_base_url_subpath(&base_url, u)).collect();
-        let urls_message = UrlsMessage::new(base_url, sub_urls);
+        let urls = self.subpaths_scraper.scrap(&base_url, response).collect();
+        let urls_message = UrlsMessage::new(base_url, urls);
         self.send_urls(urls_message);
     }
 }
