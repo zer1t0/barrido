@@ -28,12 +28,12 @@ impl ScraperProvider for EmptyScraperProvider {
     }
 }
 
-pub struct HtmlScraperManager {
+pub struct UrlsScraperProvider {
+    channel: Channel<UrlsMessage>,
     subpaths_scraper: SubPathsScraper,
-    discovered_paths_sender: UrlsSender,
 }
 
-impl HtmlScraperManager {
+impl UrlsScraperProvider {
     pub fn new(discovered_paths_sender: UrlsSender) -> Self {
         return Self {
             subpaths_scraper: SubPathsScraper::new(),
@@ -44,17 +44,23 @@ impl HtmlScraperManager {
     fn send_urls(&self, message: UrlsMessage) {
         info!("send {} urls", message.urls.len());
         if message.urls.len() != 0 {
-            self.discovered_paths_sender
-                .send(message)
-                .expect("Error sending new path");
+            self.send(message);
         }
+    }
+
+    fn send(&self, message: UrlsMessage) {
+        self.channel.sender.send(message).expect("Scraper: Error sending urls");
     }
 }
 
-impl ScraperManager for HtmlScraperManager {
-    fn scrap_response(&self, base_url: Url, response: &Response) {
+impl ScraperProvider for UrlsScraperProvider {
+    fn scrap(&self, base_url: Url, response: &Response) {
         let urls = self.subpaths_scraper.scrap(&base_url, response).collect();
         let urls_message = UrlsMessage::new(base_url, urls);
         self.send_urls(urls_message);
+    }
+
+    fn receiver(&self) -> Receiver<UrlsMessage> {
+        return self.channel.get_receiver();
     }
 }

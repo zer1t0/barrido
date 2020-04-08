@@ -1,10 +1,10 @@
 mod html_scraper;
 mod javascript_scraper;
 mod response_scraper;
-mod scraper_manager;
+mod scraper_provider;
 mod subpaths_scraper;
 mod url_combinator;
 
-pub use scraper_manager::{
-    EmptyScraperManager, HtmlScraperManager, ScraperManager,
+pub use scraper_provider::{
+    EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
