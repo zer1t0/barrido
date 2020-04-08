@@ -4,7 +4,7 @@ use crate::discoverer::http::{Response, Url};
 
 use log::info;
 
-pub trait ScraperProvider {
+pub trait ScraperProvider: Send {
     fn scrap(&self, base_url: Url, response: &Response);
     fn receiver(&self) -> &Receiver<UrlsMessage>;
 }
@@ -14,7 +14,7 @@ pub struct EmptyScraperProvider {
 }
 
 impl EmptyScraperProvider {
-    pub fn new(_: UrlsSender) -> Self {
+    pub fn new() -> Self {
         let s = Self {channel: Channel::new()};
         drop(s.channel.sender);
         return s;
@@ -34,10 +34,10 @@ pub struct UrlsScraperProvider {
 }
 
 impl UrlsScraperProvider {
-    pub fn new(discovered_paths_sender: UrlsSender) -> Self {
+    pub fn new() -> Self {
         return Self {
+            channel: Channel::new(),
             subpaths_scraper: SubPathsScraper::new(),
-            discovered_paths_sender,
         };
     }
 
@@ -60,7 +60,7 @@ impl ScraperProvider for UrlsScraperProvider {
         self.send_urls(urls_message);
     }
 
-    fn receiver(&self) -> Receiver<UrlsMessage> {
+    fn receiver(&self) -> &Receiver<UrlsMessage> {
         return self.channel.get_receiver();
     }
 }

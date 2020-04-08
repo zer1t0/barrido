@@ -4,7 +4,7 @@ mod response_scraper;
 mod scraper_provider;
 mod subpaths_scraper;
 mod url_combinator;
+mod factory;
 
-pub use scraper_provider::{
-    EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
-};
+pub use scraper_provider::ScraperProvider;
+pub use factory::ScraperFactory;
