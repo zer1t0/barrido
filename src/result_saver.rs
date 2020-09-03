@@ -14,8 +14,8 @@ impl JsonResultSaver {
             Vec::with_capacity(results.len());
         for answer in results.iter() {
             json_results.push(JsonResponseInfo {
-                path: answer.url().path().to_string(),
-                status: *answer.status(),
+                path: answer.url.path().to_string(),
+                status: answer.status,
             })
         }
 

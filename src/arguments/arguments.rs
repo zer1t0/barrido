@@ -2,7 +2,6 @@ use super::defs::args;
 use super::parser::ArgumentsParser;
 use crate::discoverer::http::HttpOptions;
 use derive_builder::Builder;
-use getset::Getters;
 use regex::Regex;
 use reqwest::Proxy;
 use std::collections::HashMap;
@@ -21,28 +20,27 @@ pub enum RangeSizeVerification {
 }
 
 /// Class used to store the arguments provided by the user.
-#[derive(Clone, Getters, Builder)]
-#[getset(get = "pub")]
+#[derive(Clone, Builder)]
 pub struct Arguments {
-    threads: usize,
-    urls: String,
-    wordlist: String,
-    out_file_json: Option<String>,
-    proxy: Option<Proxy>,
-    check_ssl: bool,
-    expand_path: bool,
-    codes_verification: CodesVerification,
-    regex_verification: Option<Regex>,
-    size_range_verification: Option<RangeSizeVerification>,
-    user_agent: String,
-    show_status: bool,
-    show_size: bool,
-    show_progress: bool,
-    use_scraper: bool,
-    follow_redirects: bool,
-    timeout: Duration,
-    headers: HashMap<String, String>,
-    verbosity: u64,
+    pub threads: usize,
+    pub urls: String,
+    pub wordlist: String,
+    pub out_file_json: Option<String>,
+    pub proxy: Option<Proxy>,
+    pub check_ssl: bool,
+    pub expand_path: bool,
+    pub codes_verification: CodesVerification,
+    pub regex_verification: Option<Regex>,
+    pub size_range_verification: Option<RangeSizeVerification>,
+    pub user_agent: String,
+    pub show_status: bool,
+    pub show_size: bool,
+    pub show_progress: bool,
+    pub use_scraper: bool,
+    pub follow_redirects: bool,
+    pub timeout: Duration,
+    pub headers: HashMap<String, String>,
+    pub verbosity: u64,
 }
 
 impl Arguments {

@@ -29,7 +29,7 @@ fn main() {
     let args = Arguments::parse_args();
 
     let wordlist =
-        File::open(args.wordlist()).expect("Error opening wordlist file");
+        File::open(&args.wordlist).expect("Error opening wordlist file");
 
     let paths_reader = BufReader::new(wordlist);
     let paths: Vec<String> = paths_reader
@@ -41,15 +41,15 @@ fn main() {
 
     let verificator = generate_verificator(&args);
 
-    let base_urls = parse_urls(args.urls());
+    let base_urls = parse_urls(&args.urls);
 
     let max_requests_count = paths.len() * base_urls.len();
 
     let discoverer = DiscovererBuilder::new(base_urls, paths)
-        .requesters_count(*args.threads())
+        .requesters_count(args.threads)
         .verificator(verificator)
         .http_options(http_options)
-        .use_scraper(*args.use_scraper())
+        .use_scraper(args.use_scraper)
         .spawn();
 
     let (signal_sender, signal_receiver) = crossbeam_channel::unbounded::<()>();
@@ -57,11 +57,11 @@ fn main() {
     spawn_signal_handler(signal_sender);
 
     let printer = Printer::new(
-        *args.verbosity(),
-        *args.show_status(),
-        *args.show_size(),
-        *args.show_progress(),
-        *args.expand_path(),
+        args.verbosity,
+        args.show_status,
+        args.show_size,
+        args.show_progress,
+        args.expand_path,
     );
 
     let results = ResultHandler::start(
@@ -72,7 +72,7 @@ fn main() {
         printer,
     );
 
-    if let Some(out_file_path) = args.out_file_json() {
+    if let Some(out_file_path) = &args.out_file_json {
         JsonResultSaver::save_results(&results, out_file_path);
     }
 }
@@ -86,7 +86,7 @@ fn generate_verificator(args: &Arguments) -> Verificator {
 }
 
 fn generate_codes_verificator(args: &Arguments) -> Verificator {
-    match args.codes_verification() {
+    match &args.codes_verification {
         CodesVerification::ValidCodes(codes) => {
             CodesVerificator::new(codes.clone())
         }
@@ -97,14 +97,14 @@ fn generate_codes_verificator(args: &Arguments) -> Verificator {
 }
 
 fn generate_regex_verificator(args: &Arguments) -> Verificator {
-    match args.regex_verification() {
+    match &args.regex_verification {
         Some(filter_regex) => !RegexVerificator::new(filter_regex.clone()),
         None => TrueVerificator::new(),
     }
 }
 
 fn generate_sizes_verificator(args: &Arguments) -> Verificator {
-    let range_verificator = match args.size_range_verification() {
+    let range_verificator = match &args.size_range_verification {
         Some(size_range_verification) => match size_range_verification {
             RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
                 ranges

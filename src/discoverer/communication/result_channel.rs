@@ -2,19 +2,17 @@ use reqwest;
 use reqwest::Url;
 use super::channel::{Channel, Sender, Receiver};
 use crate::discoverer::http::Response;
-use getset::Getters;
 
 pub type ResultReceiver = Receiver<Result<Answer, Error>>;
 pub type ResultSender = Sender<Result<Answer, Error>>;
 pub type ResultChannel = Channel<Result<Answer, Error>>;
 
-#[derive(Debug, Getters)]
-#[getset (get = "pub")]
+#[derive(Debug)]
 pub struct Answer {
-    valid: bool,
-    url: Url,
-    status: u16,
-    size: usize,
+    pub valid: bool,
+    pub url: Url,
+    pub status: u16,
+    pub size: usize,
 }
 
 

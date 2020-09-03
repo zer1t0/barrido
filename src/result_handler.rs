@@ -98,7 +98,7 @@ impl ResultHandler {
 
     fn handle_answer(&mut self, answer: Answer) {
         self.received_count += 1;
-        match answer.valid() {
+        match answer.valid {
             true => self.handle_valid(answer),
             false => {}
         }
@@ -107,9 +107,9 @@ impl ResultHandler {
 
     fn handle_valid(&mut self, answer: Answer) {
         self.printer.print_path(
-            answer.url(),
-            *answer.status(),
-            *answer.size(),
+            &answer.url,
+            answer.status,
+            answer.size,
         );
 
         self.results.push(answer);
