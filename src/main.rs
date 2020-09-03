@@ -1,10 +1,12 @@
 mod arguments;
 pub mod discoverer;
 mod printer;
+mod readin;
 mod result_handler;
 mod result_saver;
 
 use ctrlc;
+use regex::Regex;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -28,18 +30,14 @@ fn main() {
     env_logger::init();
     let args = Arguments::parse_args();
 
-    let wordlist =
-        File::open(&args.wordlist).expect("Error opening wordlist file");
-
-    let paths_reader = BufReader::new(wordlist);
-    let paths: Vec<String> = paths_reader
-        .lines()
-        .map(|l| l.expect("error parsing line"))
-        .collect();
-
     let http_options: HttpOptions = args.clone().into();
+    let verificator = generate_verificator(
+        &args.codes_verification,
+        &args.regex_verification,
+        &args.size_range_verification,
+    );
 
-    let verificator = generate_verificator(&args);
+    let paths: Vec<String> = get_paths(vec![args.wordlist]);
 
     let base_urls = parse_urls(&args.urls);
 
@@ -77,16 +75,26 @@ fn main() {
     }
 }
 
-fn generate_verificator(args: &Arguments) -> Verificator {
-    let codes_verificator = generate_codes_verificator(args);
-    let regex_verificator = generate_regex_verificator(args);
-    let sizes_verificator = generate_sizes_verificator(args);
+fn get_paths(paths: Vec<String>) -> Vec<String> {
+    readin::read_inputs(paths).collect()
+}
+
+fn generate_verificator(
+    codes_verification: &CodesVerification,
+    regex_verification: &Option<Regex>,
+    range_size_verification: &Option<RangeSizeVerification>,
+) -> Verificator {
+    let codes_verificator = generate_codes_verificator(codes_verification);
+    let regex_verificator = generate_regex_verificator(regex_verification);
+    let sizes_verificator = generate_sizes_verificator(range_size_verification);
 
     return codes_verificator & regex_verificator & sizes_verificator;
 }
 
-fn generate_codes_verificator(args: &Arguments) -> Verificator {
-    match &args.codes_verification {
+fn generate_codes_verificator(
+    codes_verification: &CodesVerification,
+) -> Verificator {
+    match codes_verification {
         CodesVerification::ValidCodes(codes) => {
             CodesVerificator::new(codes.clone())
         }
@@ -96,15 +104,19 @@ fn generate_codes_verificator(args: &Arguments) -> Verificator {
     }
 }
 
-fn generate_regex_verificator(args: &Arguments) -> Verificator {
-    match &args.regex_verification {
+fn generate_regex_verificator(
+    regex_verification: &Option<Regex>,
+) -> Verificator {
+    match regex_verification {
         Some(filter_regex) => !RegexVerificator::new(filter_regex.clone()),
         None => TrueVerificator::new(),
     }
 }
 
-fn generate_sizes_verificator(args: &Arguments) -> Verificator {
-    let range_verificator = match &args.size_range_verification {
+fn generate_sizes_verificator(
+    range_size_verification: &Option<RangeSizeVerification>,
+) -> Verificator {
+    let range_verificator = match range_size_verification {
         Some(size_range_verification) => match size_range_verification {
             RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
                 ranges
