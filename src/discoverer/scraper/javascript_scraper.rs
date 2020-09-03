@@ -1,5 +1,6 @@
 use regex::{CaptureMatches, Regex};
 
+#[derive(Clone)]
 pub struct JsPathsScraper {
     paths_regex: Regex,
 }

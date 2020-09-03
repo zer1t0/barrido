@@ -1,13 +1,11 @@
 use crate::discoverer::communication::{
     UrlMessage, UrlSender, UrlsMessage, UrlsReceiver, WaitMutex,
 };
-use crossbeam_channel::{TryRecvError, RecvError};
+use crossbeam_channel::RecvError;
 use reqwest::Url;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufRead, BufReader, Lines};
 
-use log::{info,trace};
+use log::{info, trace};
 
 pub struct UrlAggregator {
     url_sender: UrlSender,
@@ -30,50 +28,23 @@ impl UrlAggregator {
         };
     }
 
-    pub fn run(
-        self,
-        base_urls: Vec<Url>,
-        paths_reader: BufReader<File>,
-    ) {
+    pub fn run(self, base_urls: Vec<Url>, paths: Vec<String>) {
         info!("Init");
-        self.receive_from_file_and_scraper(&base_urls, paths_reader.lines());
+        self.receive_from_file_and_scraper(&base_urls, paths);
         info!("Finish");
     }
 
     fn receive_from_file_and_scraper(
         mut self,
         base_urls: &[Url],
-        mut file_paths: Lines<BufReader<File>>,
+        file_paths: Vec<String>,
     ) {
-        loop {
-            match file_paths.next() {
-                Some(line) => {
-                    let path = line.expect("PathDiscoverer: error unwrapping line");
-                    for base_url in base_urls.iter() {
-                        self.send_path(base_url, &path);
-                        if let Err(_) = self.try_receive_from_scraper() {
-                            return self
-                                .receive_only_from_file(base_urls, file_paths);
-                        }
-                    }
-                }
-                None => {
-                    info!("Paths in file finished");
-                    return self.receive_only_from_scraper();
-                }
+        for path in file_paths {
+            for base_url in base_urls {
+                self.send_path(base_url, &path);
             }
         }
-    }
-
-    fn try_receive_from_scraper(&mut self) -> Result<(), ()> {
-        match self.try_recv_scraper() {
-            Ok(paths) => self.send_urls(paths),
-            Err(channel_error) => match channel_error {
-                TryRecvError::Empty => {}
-                TryRecvError::Disconnected => return Err(()),
-            },
-        }
-        return Ok(());
+        return self.receive_only_from_scraper();
     }
 
     fn receive_only_from_scraper(mut self) {
@@ -94,24 +65,6 @@ impl UrlAggregator {
             .lock()
             .expect("PathProvider: Error locking mutex");
         return self.scraper_urls_receiver.recv();
-    }
-
-    fn try_recv_scraper(&self) -> Result<UrlsMessage, TryRecvError> {
-        return self.scraper_urls_receiver.try_recv();
-    }
-
-    fn receive_only_from_file(
-        mut self,
-        base_urls: &[Url],
-        file_paths: Lines<BufReader<File>>,
-    ) {
-        for line in file_paths {
-            let path = line.unwrap();
-            for base_url in base_urls.iter() {
-                self.send_path(base_url, &path);
-            }
-        }
-        info!("Paths in file finished");
     }
 
     fn send_path(&mut self, base_url: &Url, path: &str) {

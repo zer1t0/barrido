@@ -8,7 +8,7 @@ use crate::discoverer::communication::{
     ResponseMessage, ResponseReceiver, WaitMutex,
 };
 use crate::discoverer::http::Response;
-use crate::discoverer::scraper::ScraperManager;
+use crate::discoverer::scraper::ScraperProvider;
 use crate::discoverer::verificator::Verificator;
 use reqwest::Url;
 
@@ -18,7 +18,7 @@ pub struct ResponseHandler {
     response_receiver: ResponseReceiver,
     result_sender: ResultSender,
     verificator: Arc<Verificator>,
-    scraper: Box<dyn ScraperManager>,
+    scraper: Arc<Box<dyn ScraperProvider>>,
     wait_mutex: WaitMutex,
     id: usize,
 }
@@ -28,7 +28,7 @@ impl ResponseHandler {
         response_receiver: Receiver<ResponseMessage>,
         result_sender: ResultSender,
         verificator: Arc<Verificator>,
-        scraper: Box<dyn ScraperManager>,
+        scraper: Arc<Box<dyn ScraperProvider>>,
         wait_mutex: WaitMutex,
         id: usize,
     ) -> Self {
@@ -129,6 +129,6 @@ impl ResponseHandler {
     }
 
     fn scrap(&self, base_url: Url, response: &Response) {
-        self.scraper.scrap_response(base_url, response);
+        self.scraper.scrap(base_url, response);
     }
 }

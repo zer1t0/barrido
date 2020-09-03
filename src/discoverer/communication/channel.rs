@@ -1,9 +1,7 @@
 use crossbeam_channel::{bounded, unbounded};
 pub use crossbeam_channel::{Receiver, Sender};
-use getset::Getters;
 
-#[derive(Getters)]
-#[getset(get = "pub with_prefix")]
+#[derive(Clone)]
 pub struct Channel<T> {
     pub sender: Sender<T>,
     pub receiver: Receiver<T>,

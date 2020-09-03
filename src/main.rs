@@ -7,25 +7,22 @@ mod result_saver;
 use ctrlc;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
 
 use crossbeam_channel;
 
 use discoverer::http::HttpOptions;
-use discoverer::{DiscovererBuilder, UrlPathProvider};
 use discoverer::verificator::{
     CodesVerificator, OrVerificator, RegexVerificator, SizeVerificator,
     TrueVerificator, Verificator,
 };
+use discoverer::DiscovererBuilder;
 
 use printer::Printer;
 use reqwest::Url;
 use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
-use arguments::{
-    Arguments, CodesVerification, RangeSizeVerification,
-};
+use arguments::{Arguments, CodesVerification, RangeSizeVerification};
 
 fn main() {
     env_logger::init();
@@ -35,7 +32,10 @@ fn main() {
         File::open(args.wordlist()).expect("Error opening wordlist file");
 
     let paths_reader = BufReader::new(wordlist);
-    let paths = paths_reader.lines().map(|l| l.expect("error parsing line")).collect();
+    let paths: Vec<String> = paths_reader
+        .lines()
+        .map(|l| l.expect("error parsing line"))
+        .collect();
 
     let http_options: HttpOptions = args.clone().into();
 
@@ -45,10 +45,7 @@ fn main() {
 
     let max_requests_count = paths.len() * base_urls.len();
 
-    let paths_provider = UrlPathProvider::new(base_urls, paths);
-
-
-    let discoverer = DiscovererBuilder::new(paths_provider)
+    let discoverer = DiscovererBuilder::new(base_urls, paths)
         .requesters_count(*args.threads())
         .verificator(verificator)
         .http_options(http_options)
@@ -135,12 +132,6 @@ fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {
             .expect("SignalHandler: error sending signal");
     })
     .unwrap();
-}
-
-fn get_file_lines<P: AsRef<Path>>(path: P) -> usize {
-    let file = File::open(path).unwrap();
-    let file_reader = BufReader::new(file);
-    return file_reader.lines().count();
 }
 
 fn parse_urls(urls: &str) -> Vec<Url> {

@@ -5,6 +5,7 @@ pub type UrlsReceiver = Receiver<UrlsMessage>;
 pub type UrlsSender = Sender<UrlsMessage>;
 pub type UrlsChannel = Channel<UrlsMessage>;
 
+#[derive(Clone)]
 pub struct UrlsMessage {
     pub base_url: Url,
     pub urls: Vec<Url>,

@@ -4,7 +4,7 @@ use std::thread;
 use threadpool::ThreadPool;
 
 use crate::discoverer::actors::{
-    EndChecker, Requester, ResponseHandler, UrlAggregator, UrlPathProvider,
+    EndChecker, Requester, ResponseHandler, UrlAggregator,
 };
 use crate::discoverer::communication::result_channel::{
     ResultChannel, ResultReceiver,
@@ -15,29 +15,33 @@ use crate::discoverer::communication::{
 };
 use crate::discoverer::http::HttpOptions;
 use crate::discoverer::scraper::{
-    EmptyScraperManager, HtmlScraperManager, ScraperManager,
+    EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
 use crate::discoverer::verificator;
 use crate::discoverer::verificator::Verificator;
 
+use reqwest::Url;
+
 pub struct DiscovererBuilder {
-    paths_provider: UrlPathProvider,
     requesters_count: usize,
     response_handlers_count: usize,
     http_options: HttpOptions,
     response_verificator: Verificator,
     use_scraper: bool,
+    base_urls: Vec<Url>,
+    paths: Vec<String>,
 }
 
 impl DiscovererBuilder {
-    pub fn new(paths_provider: UrlPathProvider) -> Self {
+    pub fn new(base_urls: Vec<Url>, paths: Vec<String>) -> Self {
         return Self {
-            paths_provider,
             requesters_count: 10,
             response_handlers_count: 10,
             http_options: HttpOptions::default(),
             response_verificator: verificator::create_default(),
             use_scraper: false,
+            base_urls,
+            paths,
         };
     }
 
@@ -76,19 +80,19 @@ impl DiscovererBuilder {
         );
 
         return DiscovererSpawner::new(
-            self.paths_provider,
             response_verificator,
             url_client,
             requesters_pool,
             response_handlers_pool,
             self.use_scraper,
+            self.base_urls,
+            self.paths,
         )
         .spawn();
     }
 }
 
 struct DiscovererSpawner {
-    paths_provider: UrlPathProvider,
     response_verificator: Arc<Verificator>,
     url_client: Arc<reqwest::Client>,
     requesters_pool: ThreadPool,
@@ -100,21 +104,23 @@ struct DiscovererSpawner {
     url_channel: UrlChannel,
     urls_channel: UrlsChannel,
     use_scraper: bool,
+    base_urls: Vec<Url>,
+    paths: Vec<String>,
 }
 
 impl DiscovererSpawner {
     fn new(
-        paths_provider: UrlPathProvider,
         response_verificator: Arc<Verificator>,
         url_client: Arc<reqwest::Client>,
         requesters_pool: ThreadPool,
         response_handlers_pool: ThreadPool,
         use_scraper: bool,
+        base_urls: Vec<Url>,
+        paths: Vec<String>,
     ) -> Self {
         let max_paths_count = requesters_pool.max_count() * 4;
 
         return Self {
-            paths_provider,
             response_verificator,
             url_client,
             requesters_pool,
@@ -126,13 +132,16 @@ impl DiscovererSpawner {
             result_channel: ResultChannel::default(),
             end_channel: EndChannel::default(),
             response_channel: ResponseChannel::default(),
-            url_channel: UrlChannel::new(max_paths_count),
+            url_channel: UrlChannel::with_capacity(max_paths_count),
             urls_channel: UrlsChannel::default(),
             use_scraper,
+            base_urls,
+            paths,
         };
     }
 
     fn spawn(mut self) -> Discoverer {
+        let scraper = self.create_scraper();
         let response_handlers_wait_mutexes =
             new_wait_mutex_vec(self.response_handlers_pool.max_count());
 
@@ -141,9 +150,13 @@ impl DiscovererSpawner {
 
         let paths_provider_wait_mutex = new_wait_mutex();
 
-        self.spawn_response_handlers(&response_handlers_wait_mutexes);
+        self.spawn_response_handlers(&response_handlers_wait_mutexes, scraper);
         self.spawn_requesters(&requesters_wait_mutexes);
-        self.spawn_url_aggregator(paths_provider_wait_mutex.clone());
+        self.spawn_url_aggregator(
+            paths_provider_wait_mutex.clone(),
+            self.base_urls.clone(),
+            self.paths.clone(),
+        );
 
         Self::spawn_end_checker(
             requesters_wait_mutexes,
@@ -152,34 +165,45 @@ impl DiscovererSpawner {
             self.response_handlers_pool,
             paths_provider_wait_mutex,
             self.paths_provider_pool,
-            self.end_channel.sender().clone(),
+            self.end_channel.sender.clone(),
         );
 
         return Discoverer::new(self.result_channel, self.end_channel);
     }
 
-    fn spawn_response_handlers(&mut self, wait_mutexes: &Vec<WaitMutex>) {
-        for (i, wait_mutex) in wait_mutexes.iter().enumerate() {
-            self.spawn_response_handler(wait_mutex.clone(), i);
+    fn create_scraper(&self) -> Box<dyn ScraperProvider> {
+        match self.use_scraper {
+            true => return Box::new(UrlsScraperProvider::new()),
+            false => return Box::new(EmptyScraperProvider::new()),
         }
     }
 
-    fn spawn_response_handler(&mut self, wait_mutex: WaitMutex, id: usize) {
-        let response_receiver = self.response_channel.receiver().clone();
-        let result_sender = self.result_channel.sender().clone();
+    fn spawn_response_handlers(
+        &mut self,
+        wait_mutexes: &Vec<WaitMutex>,
+        scraper: Box<dyn ScraperProvider>,
+    ) {
+        let scraper_arc = Arc::new(scraper);
+        for (i, wait_mutex) in wait_mutexes.iter().enumerate() {
+            self.spawn_response_handler(
+                wait_mutex.clone(),
+                i,
+                scraper_arc.clone(),
+            );
+        }
+    }
+
+    fn spawn_response_handler(
+        &mut self,
+        wait_mutex: WaitMutex,
+        id: usize,
+        scraper: Arc<Box<dyn ScraperProvider>>,
+    ) {
+        let response_receiver = self.response_channel.receiver.clone();
+        let result_sender = self.result_channel.sender.clone();
         let response_verificator = self.response_verificator.clone();
-        let new_urls_sender = self.urls_channel.sender().clone();
-        let use_scraper = self.use_scraper;
 
         self.response_handlers_pool.execute(move || {
-            let scraper: Box<dyn ScraperManager>;
-
-            if use_scraper {
-                scraper = Box::new(HtmlScraperManager::new(new_urls_sender));
-            } else {
-                scraper = Box::new(EmptyScraperManager::new(new_urls_sender));
-            }
-
             ResponseHandler::new(
                 response_receiver,
                 result_sender,
@@ -199,9 +223,9 @@ impl DiscovererSpawner {
     }
 
     fn spawn_requester(&mut self, wait_mutex: WaitMutex, requester_id: usize) {
-        let url_receiver = self.url_channel.receiver().clone();
+        let url_receiver = self.url_channel.receiver.clone();
         let client = self.url_client.clone();
-        let response_sender = self.response_channel.sender().clone();
+        let response_sender = self.response_channel.sender.clone();
 
         self.requesters_pool.execute(move || {
             Requester::new(
@@ -215,14 +239,18 @@ impl DiscovererSpawner {
         });
     }
 
-    fn spawn_url_aggregator(&self, wait_mutex: WaitMutex) {
-        let url_sender = self.url_channel.sender().clone();
-        let scraper_receiver = self.urls_channel.receiver().clone();
-        let paths_provider_receiver = self.paths_provider.receiver().clone();
-        
+    fn spawn_url_aggregator(
+        &self,
+        wait_mutex: WaitMutex,
+        base_urls: Vec<Url>,
+        paths: Vec<String>,
+    ) {
+        let url_sender = self.url_channel.sender.clone();
+        let scraper_receiver = self.urls_channel.receiver.clone();
+
         self.paths_provider_pool.execute(move || {
-            let receivers = vec![paths_provider_receiver, scraper_receiver];
-            UrlAggregator::new(url_sender, receivers, wait_mutex).run();
+            UrlAggregator::new(url_sender, scraper_receiver, wait_mutex)
+                .run(base_urls, paths);
         });
     }
 
@@ -264,10 +292,10 @@ impl Discoverer {
     }
 
     pub fn result_receiver(&self) -> &ResultReceiver {
-        return self.result_channel.receiver();
+        return &self.result_channel.receiver;
     }
 
     pub fn end_receiver(&self) -> &Receiver<()> {
-        return self.end_channel.receiver();
+        return &self.end_channel.receiver;
     }
 }

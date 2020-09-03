@@ -12,7 +12,7 @@ impl UrlPathProvider {
         return Self {
             urls,
             paths,
-            channel: Channel::new(20),
+            channel: Channel::with_capacity(20),
         };
     }
 
@@ -22,7 +22,7 @@ impl UrlPathProvider {
                 let url =
                     base_url.join(&path).expect("error combining path and url");
                 if let Err(error) =
-                    self.channel.sender().send((base_url.clone(), url))
+                    self.channel.sender.send((base_url.clone(), url))
                 {
                     panic!("Error sending url to aggregator {:?}", error);
                 }
@@ -31,6 +31,6 @@ impl UrlPathProvider {
     }
 
     pub fn receiver(&self) -> &Receiver<(Url, Url)> {
-        return self.channel.receiver();
+        return &self.channel.receiver;
     }
 }
