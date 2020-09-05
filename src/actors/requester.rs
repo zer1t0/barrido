@@ -1,4 +1,4 @@
-use crate::discoverer::communication::{
+use crate::communication::{
     ResponseMessage, ResponseSender, UrlMessage, UrlReceiver, WaitMutex,
 };
 use crossbeam_channel::RecvError;

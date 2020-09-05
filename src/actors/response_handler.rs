@@ -1,15 +1,15 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use crate::discoverer::communication::result_channel::{
+use crate::communication::result_channel::{
     Answer, Error, ResultSender,
 };
-use crate::discoverer::communication::{
+use crate::communication::{
     ResponseMessage, ResponseReceiver, WaitMutex,
 };
-use crate::discoverer::http::Response;
-use crate::discoverer::scraper::ScraperProvider;
-use crate::discoverer::verificator::Verificator;
+use crate::http::Response;
+use crate::scraper::ScraperProvider;
+use crate::verificator::Verificator;
 use reqwest::Url;
 
 use log::{debug, info, trace};

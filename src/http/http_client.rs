@@ -31,25 +31,6 @@ impl HttpOptions {
         };
     }
 
-    pub fn user_agent(&self) -> &String {
-        return &self.user_agent;
-    }
-
-    pub fn follow_redirects(&self) -> bool {
-        return self.follow_redirects;
-    }
-
-    pub fn check_ssl(&self) -> bool {
-        return self.check_ssl;
-    }
-
-    pub fn proxy(&self) -> Option<&Proxy> {
-        return self.proxy.as_ref();
-    }
-
-    pub fn timeout(&self) -> &Duration {
-        return &self.timeout;
-    }
 }
 
 impl Default for HttpOptions {

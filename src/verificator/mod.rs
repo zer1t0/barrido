@@ -16,6 +16,3 @@ pub use size_verificator::SizeVerificator;
 pub use true_verificator::TrueVerificator;
 pub use verificator::{Verificator, VerificatorTrait};
 
-pub fn create_default() -> Verificator {
-    return CodesVerificator::new(vec![200, 204, 301, 302, 307, 401, 403]);
-}

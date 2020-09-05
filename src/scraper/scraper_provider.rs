@@ -1,6 +1,6 @@
 use super::subpaths_scraper::SubPathsScraper;
-use crate::discoverer::communication::{UrlsMessage, Receiver, Channel};
-use crate::discoverer::http::{Response, Url};
+use crate::communication::{UrlsMessage, Receiver, Channel};
+use crate::http::{Response, Url};
 
 use log::info;
 

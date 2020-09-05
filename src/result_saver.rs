@@ -1,4 +1,4 @@
-use crate::discoverer::communication::result_channel::Answer;
+use crate::communication::result_channel::Answer;
 use serde::Serialize;
 use std::fs::File;
 use std::io::Write;

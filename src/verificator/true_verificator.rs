@@ -1,4 +1,4 @@
-use crate::discoverer::http::Response;
+use crate::http::Response;
 use super::{Verificator, VerificatorTrait};
 
 pub struct TrueVerificator {}

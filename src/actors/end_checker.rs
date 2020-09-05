@@ -1,4 +1,4 @@
-use crate::discoverer::communication::WaitMutex;
+use crate::communication::WaitMutex;
 use std::thread::sleep;
 use std::time::Duration;
 use threadpool::ThreadPool;

@@ -1,9 +1,13 @@
 mod arguments;
-pub mod discoverer;
 mod printer;
 mod readin;
 mod result_handler;
 mod result_saver;
+mod actors;
+mod communication;
+mod http;
+mod scraper;
+mod verificator;
 
 use ctrlc;
 use regex::Regex;
@@ -12,12 +16,11 @@ use std::io::{BufRead, BufReader};
 
 use crossbeam_channel;
 
-use discoverer::http::HttpOptions;
-use discoverer::verificator::{
+use crate::http::HttpOptions;
+use crate::verificator::{
     CodesVerificator, OrVerificator, RegexVerificator, SizeVerificator,
     TrueVerificator, Verificator,
 };
-use discoverer::DiscovererBuilder;
 
 use printer::Printer;
 use reqwest::Url;
@@ -25,6 +28,26 @@ use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
 use arguments::{Arguments, CodesVerification, RangeSizeVerification};
+
+use crossbeam_channel::Receiver;
+use std::sync::Arc;
+use std::thread;
+use threadpool::ThreadPool;
+
+use crate::actors::{
+    EndChecker, Requester, ResponseHandler, UrlAggregator,
+};
+use crate::communication::result_channel::{
+    ResultChannel, ResultReceiver, ResultSender,
+};
+use crate::communication::{
+    new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
+    ResponseReceiver, ResponseSender, UrlChannel, UrlReceiver, UrlSender,
+    UrlsChannel, UrlsReceiver, WaitMutex,
+};
+use crate::scraper::{
+    EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
+};
 
 fn main() {
     env_logger::init();
@@ -43,12 +66,16 @@ fn main() {
 
     let max_requests_count = paths.len() * base_urls.len();
 
-    let discoverer = DiscovererBuilder::new(base_urls, paths)
-        .requesters_count(args.threads)
-        .verificator(verificator)
-        .http_options(http_options)
-        .use_scraper(args.use_scraper)
-        .spawn();
+    let url_client = http_options.into();
+
+    let discoverer = spawn_actors(
+        args.use_scraper,
+        args.threads,
+        verificator,
+        url_client,
+        base_urls,
+        paths
+    );
 
     let (signal_sender, signal_receiver) = crossbeam_channel::unbounded::<()>();
 
@@ -63,8 +90,8 @@ fn main() {
     );
 
     let results = ResultHandler::start(
-        discoverer.result_receiver().clone(),
-        discoverer.end_receiver().clone(),
+        discoverer.result_channel_receiver,
+        discoverer.end_channel_receiver,
         signal_receiver,
         max_requests_count,
         printer,
@@ -177,4 +204,179 @@ fn parse_urls(urls: &str) -> Vec<Url> {
         }
     };
     return base_urls;
+}
+
+fn spawn_actors(
+    use_scraper: bool,
+    requesters_count: usize,
+    response_verificator: Verificator,
+    client: reqwest::Client,
+    base_urls: Vec<Url>,
+    paths: Vec<String>,
+) -> Discoverer {
+    let response_handlers_count = 10;
+    let scraper = create_scraper(use_scraper);
+    let response_handlers_wait_mutexes =
+        new_wait_mutex_vec(response_handlers_count);
+
+    let requesters_wait_mutexes = new_wait_mutex_vec(requesters_count);
+
+    let paths_provider_wait_mutex = new_wait_mutex();
+
+    let response_channel = ResponseChannel::default();
+    let result_channel = ResultChannel::default();
+
+    let end_channel = EndChannel::default();
+    let url_channel = UrlChannel::with_capacity(requesters_count * 4);
+    let urls_channel = UrlsChannel::default();
+
+    let response_handlers_pool = spawn_response_handlers(
+        &response_handlers_wait_mutexes,
+        scraper,
+        response_channel.receiver,
+        result_channel.sender,
+        response_verificator,
+    );
+    let requesters_pool = spawn_requesters(
+        &requesters_wait_mutexes,
+        client,
+        url_channel.receiver,
+        response_channel.sender,
+    );
+    let paths_provider_pool = spawn_paths_provider(
+        paths_provider_wait_mutex.clone(),
+        base_urls,
+        paths,
+        url_channel.sender,
+        urls_channel.receiver,
+    );
+
+    spawn_end_checker(
+        requesters_wait_mutexes,
+        requesters_pool,
+        response_handlers_wait_mutexes,
+        response_handlers_pool,
+        paths_provider_wait_mutex,
+        paths_provider_pool,
+        end_channel.sender,
+    );
+
+    return Discoverer::new(result_channel.receiver, end_channel.receiver);
+}
+
+fn create_scraper(use_scraper: bool) -> Box<dyn ScraperProvider> {
+    match use_scraper {
+        true => return Box::new(UrlsScraperProvider::new()),
+        false => return Box::new(EmptyScraperProvider::new()),
+    }
+}
+
+fn spawn_response_handlers(
+    wait_mutexes: &Vec<WaitMutex>,
+    scraper: Box<dyn ScraperProvider>,
+    response_receiver: ResponseReceiver,
+    result_sender: ResultSender,
+    response_verificator: Verificator,
+) -> ThreadPool {
+    let response_handlers_pool =
+        ThreadPool::with_name("Responsers".to_string(), wait_mutexes.len());
+    let response_verificator = Arc::new(response_verificator);
+    let scraper_arc = Arc::new(scraper);
+    for (i, wait_mutex) in wait_mutexes.iter().enumerate() {
+        let response_handler = ResponseHandler::new(
+            response_receiver.clone(),
+            result_sender.clone(),
+            response_verificator.clone(),
+            scraper_arc.clone(),
+            wait_mutex.clone(),
+            i,
+        );
+        response_handlers_pool.execute(move || {
+            response_handler.run();
+        });
+    }
+
+    return response_handlers_pool;
+}
+
+fn spawn_requesters(
+    wait_mutexes: &Vec<WaitMutex>,
+    client: reqwest::Client,
+    url_receiver: UrlReceiver,
+    response_sender: ResponseSender,
+) -> ThreadPool {
+    let requesters_pool =
+        ThreadPool::with_name("Requesters".to_string(), wait_mutexes.len());
+
+    let client = Arc::new(client);
+
+    for (i, wait_mutex) in wait_mutexes.iter().enumerate() {
+        let requester = Requester::new(
+            client.clone(),
+            url_receiver.clone(),
+            response_sender.clone(),
+            wait_mutex.clone(),
+            i,
+        );
+
+        requesters_pool.execute(move || {
+            requester.run();
+        });
+    }
+
+    return requesters_pool;
+}
+
+fn spawn_paths_provider(
+    wait_mutex: WaitMutex,
+    base_urls: Vec<Url>,
+    paths: Vec<String>,
+    url_sender: UrlSender,
+    scraper_receiver: UrlsReceiver,
+) -> ThreadPool {
+    let paths_provider_pool = ThreadPool::with_name("Providers".to_string(), 1);
+
+    paths_provider_pool.execute(move || {
+        UrlAggregator::new(url_sender, scraper_receiver, wait_mutex)
+            .run(base_urls, paths);
+    });
+
+    return paths_provider_pool;
+}
+
+fn spawn_end_checker(
+    requesters_wait_mutexes: Vec<WaitMutex>,
+    requesters_pool: ThreadPool,
+    response_handlers_wait_mutexes: Vec<WaitMutex>,
+    response_handlers_pool: ThreadPool,
+    paths_provider_wait_mutex: WaitMutex,
+    paths_provider_pool: ThreadPool,
+    end_sender: crossbeam_channel::Sender<()>,
+) {
+    thread::spawn(move || {
+        EndChecker::new(
+            requesters_wait_mutexes,
+            requesters_pool,
+            response_handlers_wait_mutexes,
+            response_handlers_pool,
+            paths_provider_wait_mutex,
+            paths_provider_pool,
+            end_sender,
+        )
+        .run();
+    });
+}
+
+pub struct Discoverer {
+    pub result_channel_receiver: ResultReceiver,
+    pub end_channel_receiver: Receiver<()>,
+}
+
+impl Discoverer {
+    fn new(result_channel_receiver: ResultReceiver, end_channel_receiver: Receiver<()>) -> Self {
+        return Self {
+            result_channel_receiver,
+            end_channel_receiver,
+        };
+    }
 }

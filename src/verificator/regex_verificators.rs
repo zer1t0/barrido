@@ -1,6 +1,6 @@
-use crate::discoverer::http::Response;
-use super::*;
+use crate::http::Response;
 use regex::Regex;
+use super::{Verificator, VerificatorTrait};
 
 pub struct RegexVerificator {
     regex: Regex,

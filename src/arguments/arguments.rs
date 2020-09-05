@@ -1,6 +1,6 @@
 use super::defs::args;
 use super::parser::ArgumentsParser;
-use crate::discoverer::http::HttpOptions;
+use crate::http::HttpOptions;
 use derive_builder::Builder;
 use regex::Regex;
 use reqwest::Proxy;

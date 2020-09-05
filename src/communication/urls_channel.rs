@@ -1,8 +1,7 @@
 use reqwest::Url;
-use super::channel::{Channel, Sender, Receiver};
+use super::channel::{Channel, Receiver};
 
 pub type UrlsReceiver = Receiver<UrlsMessage>;
-pub type UrlsSender = Sender<UrlsMessage>;
 pub type UrlsChannel = Channel<UrlsMessage>;
 
 #[derive(Clone)]

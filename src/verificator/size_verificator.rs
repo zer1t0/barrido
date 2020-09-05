@@ -1,4 +1,4 @@
-use crate::discoverer::http::Response;
+use crate::http::Response;
 use super::{Verificator, VerificatorTrait};
 
 pub struct SizeVerificator {
@@ -11,9 +11,6 @@ impl SizeVerificator {
         return Box::new(Self { min_size, max_size });
     }
 
-    pub fn new_exact(size: usize) -> Verificator {
-        return Self::new_range(size, size);
-    }
 }
 
 impl VerificatorTrait for SizeVerificator {

@@ -1,6 +1,6 @@
 use super::html_scraper::HtmlPathsScraper;
 use super::javascript_scraper::JsPathsScraper;
-use crate::discoverer::http::{ContentType, Response, Url};
+use crate::http::{ContentType, Response, Url};
 use super::url_combinator::UrlCombinator;
 
 pub struct ResponseScraper {

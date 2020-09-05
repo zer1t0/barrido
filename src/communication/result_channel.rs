@@ -1,7 +1,7 @@
 use reqwest;
 use reqwest::Url;
 use super::channel::{Channel, Sender, Receiver};
-use crate::discoverer::http::Response;
+use crate::http::Response;
 
 pub type ResultReceiver = Receiver<Result<Answer, Error>>;
 pub type ResultSender = Sender<Result<Answer, Error>>;

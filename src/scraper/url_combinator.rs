@@ -1,4 +1,4 @@
-use crate::discoverer::http::Url;
+use crate::http::Url;
 use log::warn;
 
 

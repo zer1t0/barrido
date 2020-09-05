@@ -1,23 +1,23 @@
-use crate::discoverer::http::Response;
+use crate::http::Response;
 use super::{Verificator, VerificatorTrait};
 
-pub struct AndVerificator {
+pub struct OrVerificator {
     sub_verificators: Vec<Verificator>,
 }
 
-impl AndVerificator {
+impl OrVerificator {
     pub fn new(sub_verificators: Vec<Verificator>) -> Verificator {
         return Box::new(Self { sub_verificators });
     }
 }
 
-impl VerificatorTrait for AndVerificator {
+impl VerificatorTrait for OrVerificator {
     fn is_valid_response(&self, response: &Response) -> bool {
         for verificator in self.sub_verificators.iter() {
-            if !verificator.is_valid_response(response) {
-                return false;
+            if verificator.is_valid_response(response) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
 }

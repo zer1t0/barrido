@@ -1,5 +1,5 @@
 use super::response_scraper::ResponseScraper;
-use crate::discoverer::http::{Response, Url};
+use crate::http::{Response, Url};
 
 pub struct SubPathsScraper {
     response_scraper: ResponseScraper,

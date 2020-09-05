@@ -1,4 +1,4 @@
-use crate::discoverer::http::Response;
+use crate::http::Response;
 use super::{AndVerificator, NorVerificator, OrVerificator};
 use std::ops::{BitAnd, Not, BitOr};
 
