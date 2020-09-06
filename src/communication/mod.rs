@@ -11,7 +11,7 @@ pub use response_channel::{
     ResponseChannel, ResponseMessage, ResponseReceiver, ResponseSender,
 };
 pub use url_channel::{UrlChannel, UrlMessage, UrlReceiver, UrlSender};
-pub use urls_channel::{UrlsChannel, UrlsMessage, UrlsReceiver};
+pub use urls_channel::{UrlsMessage, UrlsReceiver};
 pub use wait_mutex::{WaitMutex, new_wait_mutex, new_wait_mutex_vec};
 
 pub use channel::{Channel, Receiver, Sender};

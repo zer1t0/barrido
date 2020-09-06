@@ -43,7 +43,7 @@ use crate::communication::result_channel::{
 use crate::communication::{
     new_wait_mutex, new_wait_mutex_vec, EndChannel, ResponseChannel,
     ResponseReceiver, ResponseSender, UrlChannel, UrlReceiver, UrlSender,
-    UrlsChannel, UrlsReceiver, WaitMutex,
+    UrlsReceiver, WaitMutex,
 };
 use crate::scraper::{
     EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
