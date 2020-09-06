@@ -50,19 +50,19 @@ impl Printer {
             line += format!(" {}", body_length).as_str();
         }
 
-        println!("{}{}", self.cleaner_str, line);
+        eprint!("{}", self.cleaner_str);
+        println!("{}", line);
     }
 
     pub fn print_progress(&self, current_count: usize, max_count: usize) {
         if self.show_progress {
             let percentage = current_count as f32 / max_count as f32 * 100.0;
-
-            print!("\r{}/{} {:.2}%", current_count, max_count, percentage);
+            eprint!("\r{}/{} {:.2}%", current_count, max_count, percentage);
         }
     }
 
     pub fn print_clean(&self) {
-        print!("{}", Self::TERMINAL_CLEANER_STRING);
+        eprint!("{}", Self::TERMINAL_CLEANER_STRING);
     }
 
     pub fn print_error(&self, error: reqwest::Error) {
