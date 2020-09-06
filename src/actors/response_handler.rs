@@ -1,18 +1,14 @@
 use crossbeam_channel::*;
 use std::sync::*;
 
-use crate::communication::result_channel::{
-    Answer, Error, ResultSender,
-};
-use crate::communication::{
-    ResponseMessage, ResponseReceiver, WaitMutex,
-};
+use crate::communication::result_channel::{Answer, Error, ResultSender};
+use crate::communication::{ResponseMessage, ResponseReceiver, WaitMutex};
 use crate::http::Response;
 use crate::scraper::ScraperProvider;
 use crate::verificator::Verificator;
 use reqwest::Url;
 
-use log::{debug, info, trace};
+use log::{debug, trace};
 
 pub struct ResponseHandler {
     response_receiver: ResponseReceiver,
@@ -43,17 +39,20 @@ impl ResponseHandler {
     }
 
     pub fn run(&self) {
-        info!("{} Init", self.id);
+        debug!("Responser {}: Init", self.id);
         loop {
             match self.recv() {
                 Ok(result) => self.handle_http_result(result),
                 Err(_) => {
-                    info!("{} Response channel was closed", self.id);
+                    debug!(
+                        "Responser {}: Response channel was closed",
+                        self.id
+                    );
                     break;
                 }
             }
         }
-        info!("{} Finish", self.id);
+        debug!("Responser {}: Finish", self.id);
     }
 
     fn recv(&self) -> Result<ResponseMessage, RecvError> {
@@ -69,19 +68,13 @@ impl ResponseHandler {
     fn handle_http_result(&self, message: ResponseMessage) {
         let base_url = message.base_url;
         match message.response {
-            Ok(response) => {
-                self.process_response(base_url, response)
-            }
+            Ok(response) => self.process_response(base_url, response),
             Err(err) => self.send_error(err),
         }
     }
 
-    fn process_response(
-        &self,
-        base_url: Url,
-        response: reqwest::Response,
-    ) {
-        info!("Process response for {}", response.url());
+    fn process_response(&self, base_url: Url, response: reqwest::Response) {
+        debug!("Responser {}: Process response for {}", self.id, response.url());
         let response = Response::from(response);
         if self.is_valid(&response) {
             self.process_valid(base_url, response);
@@ -94,12 +87,8 @@ impl ResponseHandler {
         return self.verificator.is_valid_response(response);
     }
 
-    fn process_valid(
-        &self,
-        base_url: Url,
-        response: Response,
-    ) {
-        info!("{}: valid response for {}", self.id, response.url());
+    fn process_valid(&self, base_url: Url, response: Response) {
+        debug!("Responser {}: valid response for {}", self.id, response.url());
         self.scrap(base_url, &response);
 
         let answer = Answer::new_valid(response);
@@ -107,24 +96,24 @@ impl ResponseHandler {
     }
 
     fn process_invalid(&self, response: Response) {
-        info!("{}: invalid response for {}", self.id, response.url());
+        debug!("Responser {}: invalid response for {}", self.id, response.url());
         let answer = Answer::new_invalid(response);
         self.send_answer(answer);
     }
 
     fn send_error(&self, err: Error) {
-        debug!("Send error: {:?}", err);
+        trace!("Responser {}: Send error: {:?}", self.id, err);
         self.send(Err(err));
     }
 
     fn send_answer(&self, answer: Answer) {
-        debug!("Send answer: {:?}", answer);
+        trace!("Responser {}: Send answer: {:?}", self.id, answer);
         self.send(Ok(answer));
     }
 
     fn send(&self, result: Result<Answer, Error>) {
         if let Err(error) = self.result_sender.send(result) {
-            panic!("Error sending result: {:?}", error);
+            panic!("Responser {}: Error sending result: {:?}", self.id, error);
         }
     }
 

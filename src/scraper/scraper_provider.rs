@@ -2,7 +2,7 @@ use super::subpaths_scraper::SubPathsScraper;
 use crate::communication::{UrlsMessage, Receiver, Channel};
 use crate::http::{Response, Url};
 
-use log::info;
+use log::trace;
 
 pub trait ScraperProvider: Send + Sync {
     fn scrap(&self, base_url: Url, response: &Response);
@@ -41,7 +41,7 @@ impl UrlsScraperProvider {
     }
 
     fn send_urls(&self, message: UrlsMessage) {
-        info!("send {} urls", message.urls.len());
+        trace!("Scraper: send {} urls", message.urls.len());
         if message.urls.len() != 0 {
             self.send(message);
         }

@@ -5,7 +5,7 @@ use crossbeam_channel::RecvError;
 use reqwest::{Client, Url};
 use std::sync::Arc;
 
-use log::{error, info, trace, debug};
+use log::{error, trace, debug};
 
 pub struct Requester {
     client: Arc<Client>,
@@ -33,17 +33,17 @@ impl Requester {
     }
 
     pub fn run(&self) {
-        info!("{} Init", self.id);
+        debug!("Requester {}: Init", self.id);
         loop {
             match self.wait_for_path() {
                 Ok(url_message) => self.get_and_send(url_message),
                 Err(_) => {
-                    info!("{} Url channel was closed", self.id);
+                    debug!("Requester {}: Url channel was closed", self.id);
                     break;
                 }
             }
         }
-        info!("{} Finish", self.id);
+        debug!("Requester {}: Finish", self.id);
     }
 
     fn get_and_send(&self, url_message: UrlMessage) {
@@ -71,9 +71,9 @@ impl Requester {
     }
 
     fn send_response(&self, response_message: ResponseMessage) {
-        debug!("Send response {:?}", response_message);
+        debug!("Requester {}: Send response {:?}", self.id, response_message);
         if let Err(error) = self.response_sender.send(response_message) {
-            error!("Error sending response {:?}", error);
+            error!("Requester {}: Error sending response {:?}", self.id, error);
         }
     }
 }

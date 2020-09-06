@@ -5,7 +5,7 @@ use crossbeam_channel::RecvError;
 use reqwest::Url;
 use std::collections::HashMap;
 
-use log::{info, trace};
+use log::{debug, trace};
 
 pub struct UrlAggregator {
     url_sender: UrlSender,
@@ -29,9 +29,7 @@ impl UrlAggregator {
     }
 
     pub fn run(self, base_urls: Vec<Url>, paths: Vec<String>) {
-        info!("Init");
         self.receive_from_file_and_scraper(&base_urls, paths);
-        info!("Finish");
     }
 
     fn receive_from_file_and_scraper(
@@ -52,7 +50,7 @@ impl UrlAggregator {
             match self.recv_scraper() {
                 Ok(paths) => self.send_urls(paths),
                 Err(_) => {
-                    info!("No more paths from the scraper");
+                    debug!("No more paths from the scraper");
                     break;
                 }
             }

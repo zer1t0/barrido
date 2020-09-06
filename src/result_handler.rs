@@ -1,4 +1,4 @@
-use log::info;
+use log::{debug};
 use std::time::{Duration, Instant};
 
 use crate::communication::result_channel::{ResultReceiver, Answer, Error};
@@ -67,15 +67,14 @@ impl ResultHandler {
                     );
                 }
                 recv(self.end_receiver) -> _ => {
-                    info!("end received");
+                    debug!("Resulter: end received");
                     break;
                 }
                 recv(self.signal_receiver) -> _ => {
-                    info!("signal received");
+                    debug!("Resulter: signal received");
                     break;
                 }
                 recv(self.result_receiver) -> result => {
-                    info!("valid response received");
                     match result {
                         Ok(ok_result) => self.handle_result(ok_result),
                         _ => {}
@@ -84,7 +83,7 @@ impl ResultHandler {
             }
         }
 
-        info!("finishing");
+        debug!("Resulter: Finishing");
         self.printer.print_clean();
     }
 
