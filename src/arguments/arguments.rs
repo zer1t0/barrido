@@ -40,7 +40,7 @@ pub struct Arguments {
     pub follow_redirects: bool,
     pub timeout: Duration,
     pub headers: HashMap<String, String>,
-    pub verbosity: u64,
+    pub verbosity: usize,
 }
 
 impl Arguments {

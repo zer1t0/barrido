@@ -48,10 +48,12 @@ use crate::communication::{
 use crate::scraper::{
     EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
+use stderrlog;
+
 
 fn main() {
-    env_logger::init();
     let args = Arguments::parse_args();
+    init_log(args.verbosity);
 
     let http_options: HttpOptions = args.clone().into();
     let verificator = generate_verificator(
@@ -82,7 +84,6 @@ fn main() {
     spawn_signal_handler(signal_sender);
 
     let printer = Printer::new(
-        args.verbosity,
         args.show_status,
         args.show_size,
         args.show_progress,
@@ -100,6 +101,14 @@ fn main() {
     if let Some(out_file_path) = &args.out_file_json {
         JsonResultSaver::save_results(&results, out_file_path);
     }
+}
+
+fn init_log(verbosity: usize) {
+    stderrlog::new()
+        .module(module_path!())
+        .verbosity(verbosity)
+        .init()
+        .expect("Error initiating log");
 }
 
 fn get_paths(paths: Vec<String>) -> Vec<String> {

@@ -37,7 +37,7 @@ impl<'a> ArgumentsParser<'a> {
             .urls(self.value_of("url").unwrap().to_string())
             .use_scraper(self.is_present("scraper"))
             .user_agent(self.value_of("user-agent").unwrap().to_string())
-            .verbosity(self.matches.occurrences_of("verbosity"))
+            .verbosity(self.matches.occurrences_of("verbosity") as usize)
             .wordlist(wordlist_path.to_string())
             .build().expect("Error building arguments");
 

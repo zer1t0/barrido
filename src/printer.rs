@@ -1,7 +1,7 @@
 use reqwest::Url;
+use log::warn;
 
 pub struct Printer {
-    verbosity: u64,
     show_status: bool,
     show_size: bool,
     show_progress: bool,
@@ -13,7 +13,6 @@ impl Printer {
     const TERMINAL_CLEANER_STRING: &'static str = "\r\x1b[2K";
 
     pub fn new(
-        verbosity: u64,
         show_status: bool,
         show_size: bool,
         show_progress: bool,
@@ -27,7 +26,6 @@ impl Printer {
         }
 
         return Self {
-            verbosity,
             show_status,
             show_size,
             show_progress,
@@ -68,8 +66,6 @@ impl Printer {
     }
 
     pub fn print_error(&self, error: reqwest::Error) {
-        if self.verbosity > 0 {
-            eprintln!("{}[x] {:?}", self.cleaner_str, error);
-        }
+            warn!("{}[x] {:?}", self.cleaner_str, error);
     }
 }
