@@ -237,7 +237,8 @@ fn spawn_actors(
 
     let end_channel = EndChannel::default();
     let url_channel = UrlChannel::with_capacity(requesters_count * 4);
-    let urls_channel = UrlsChannel::default();
+
+    let urls_receiver = scraper.receiver().clone();
 
     let response_handlers_pool = spawn_response_handlers(
         &response_handlers_wait_mutexes,
@@ -257,7 +258,7 @@ fn spawn_actors(
         base_urls,
         paths,
         url_channel.sender,
-        urls_channel.receiver,
+        urls_receiver,
     );
 
     spawn_end_checker(
