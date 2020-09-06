@@ -71,7 +71,7 @@ impl Requester {
     }
 
     fn send_response(&self, response_message: ResponseMessage) {
-        debug!("Requester {}: Send response {:?}", self.id, response_message);
+        trace!("Requester {}: Send response {:?}", self.id, response_message);
         if let Err(error) = self.response_sender.send(response_message) {
             error!("Requester {}: Error sending response {:?}", self.id, error);
         }
