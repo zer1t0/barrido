@@ -2,7 +2,7 @@ use super::subpaths_scraper::SubPathsScraper;
 use crate::communication::{UrlsMessage, Receiver, Channel};
 use crate::http::{Response, Url};
 
-use log::trace;
+use log::{debug, trace};
 
 pub trait ScraperProvider: Send + Sync {
     fn scrap(&self, base_url: Url, response: &Response);
@@ -15,6 +15,7 @@ pub struct EmptyScraperProvider {
 
 impl EmptyScraperProvider {
     pub fn new() -> Self {
+        debug!("Scraper: Create EmptyScraperProvider");
         let s = Self {channel: Channel::new()};
         return s;
     }
@@ -34,6 +35,7 @@ pub struct UrlsScraperProvider {
 
 impl UrlsScraperProvider {
     pub fn new() -> Self {
+        debug!("Scraper: Create UrlsScraperProvider");
         return Self {
             channel: Channel::new(),
             subpaths_scraper: SubPathsScraper::new(),

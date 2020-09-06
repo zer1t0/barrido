@@ -50,7 +50,7 @@ impl UrlAggregator {
             match self.recv_scraper() {
                 Ok(paths) => self.send_urls(paths),
                 Err(_) => {
-                    debug!("No more paths from the scraper");
+                    debug!("UrlAggregator: No more paths from the scraper");
                     break;
                 }
             }
