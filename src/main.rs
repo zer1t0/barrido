@@ -191,6 +191,7 @@ fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {
     .unwrap();
 }
 
+/// Read urls from string or file
 fn parse_urls(urls: &str) -> Vec<Url> {
     let mut base_urls = Vec::new();
     match File::open(urls) {

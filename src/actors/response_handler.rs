@@ -74,7 +74,11 @@ impl ResponseHandler {
     }
 
     fn process_response(&self, base_url: Url, response: reqwest::Response) {
-        debug!("Responser {}: Process response for {}", self.id, response.url());
+        debug!(
+            "Responser {}: Process response for {}",
+            self.id,
+            response.url()
+        );
         let response = Response::from(response);
         if self.is_valid(&response) {
             self.process_valid(base_url, response);
@@ -84,11 +88,25 @@ impl ResponseHandler {
     }
 
     fn is_valid(&self, response: &Response) -> bool {
-        return self.verificator.is_valid_response(response);
+        match self.verificator.is_valid_response(response) {
+            Ok(()) => true,
+            Err(err) => {
+                debug!(
+                    "Response {} not meet verificator condition: {}",
+                    response.url(),
+                    err
+                );
+                return false;
+            }
+        }
     }
 
     fn process_valid(&self, base_url: Url, response: Response) {
-        debug!("Responser {}: valid response for {}", self.id, response.url());
+        debug!(
+            "Responser {}: valid response for {}",
+            self.id,
+            response.url()
+        );
         self.scrap(base_url, &response);
 
         let answer = Answer::new_valid(response);
@@ -96,7 +114,11 @@ impl ResponseHandler {
     }
 
     fn process_invalid(&self, response: Response) {
-        debug!("Responser {}: invalid response for {}", self.id, response.url());
+        debug!(
+            "Responser {}: invalid response for {}",
+            self.id,
+            response.url()
+        );
         let answer = Answer::new_invalid(response);
         self.send_answer(answer);
     }
