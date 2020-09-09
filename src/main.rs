@@ -89,6 +89,7 @@ fn main() {
         args.show_size,
         args.show_progress,
         args.expand_path,
+        args.show_headers,
     );
 
     let results = ResultHandler::start(

@@ -103,6 +103,12 @@ pub fn args() -> App<'static, 'static> {
                 .help("Show the progress of requests"),
         )
         .arg(
+            Arg::with_name("show-headers")
+                .long("head")
+                .short("I")
+                .help("Show the reponse headers")
+        )
+        .arg(
             Arg::with_name("scraper")
                 .long("scraper")
                 .help("Scrap for new paths in responses"),

@@ -1,5 +1,5 @@
-use reqwest;
-use reqwest::Url;
+use reqwest::{self, Url};
+use reqwest::header::HeaderMap;
 use super::channel::{Channel, Sender, Receiver};
 use crate::http::Response;
 
@@ -13,6 +13,7 @@ pub struct Answer {
     pub url: Url,
     pub status: u16,
     pub size: usize,
+    pub headers: HeaderMap,
 }
 
 
@@ -22,7 +23,8 @@ impl Answer {
             valid,
             url: response.url().clone(),
             status: response.status(),
-            size: response.body().len()
+            size: response.body().len(),
+            headers: response.headers().clone()
         }
     }
 

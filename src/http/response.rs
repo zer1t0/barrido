@@ -1,5 +1,5 @@
 use reqwest;
-use reqwest::header::*;
+use reqwest::header::{HeaderMap, CONTENT_TYPE};
 use reqwest::Url;
 
 #[derive(Debug)]
@@ -19,6 +19,10 @@ impl Response {
 
     pub fn url(&self) -> &Url {
         return self.response.url();
+    }
+
+    pub fn headers(&self) -> &HeaderMap {
+        self.response.headers()
     }
 
     pub fn content_type(&self) -> Option<ContentType> {

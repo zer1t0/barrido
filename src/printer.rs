@@ -6,8 +6,10 @@ pub struct Printer {
     show_status: bool,
     show_size: bool,
     show_progress: bool,
+    show_headers: bool,
     expand_path: bool,
     cleaner_str: &'static str,
+    newline: &'static str,
 }
 
 impl Printer {
@@ -18,6 +20,7 @@ impl Printer {
         show_size: bool,
         show_progress: bool,
         expand_path: bool,
+        show_headers: bool
     ) -> Self {
         let cleaner_str;
         if show_progress {
@@ -25,13 +28,21 @@ impl Printer {
         } else {
             cleaner_str = ""
         }
+        
+        let newline = if show_headers {
+            "\n"
+        } else {
+            ""
+        };
 
         return Self {
             show_status,
             show_size,
             show_progress,
+            show_headers,
             expand_path,
             cleaner_str,
+            newline,
         };
     }
 
@@ -46,12 +57,25 @@ impl Printer {
         if self.show_status {
             line = format!("{} {}", line, answer.status);
         }
+        
         if self.show_size {
             line = format!("{} {}", line, answer.size);
         }
 
+        if self.show_headers {
+            for (name, value) in answer.headers.iter() {
+                let str_value = if let Ok(value) = value.to_str() {
+                    value
+                } else {
+                    "Yanked"
+                };
+                
+                line = format!("{}\n{}: {}", line, name, str_value);
+            }
+        }
+
         eprint!("{}", self.cleaner_str);
-        println!("{}", line);
+        println!("{}{}", line, self.newline);
     }
 
     pub fn print_progress(&self, current_count: usize, max_count: usize) {

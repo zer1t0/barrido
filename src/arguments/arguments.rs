@@ -1,7 +1,6 @@
 use super::defs::args;
 use super::parser::ArgumentsParser;
 use crate::http::HttpOptions;
-use derive_builder::Builder;
 use regex::Regex;
 use reqwest::Proxy;
 use std::collections::HashMap;
@@ -20,7 +19,7 @@ pub enum RangeSizeVerification {
 }
 
 /// Class used to store the arguments provided by the user.
-#[derive(Clone, Builder)]
+#[derive(Clone)]
 pub struct Arguments {
     pub threads: usize,
     pub urls: String,
@@ -36,6 +35,7 @@ pub struct Arguments {
     pub show_status: bool,
     pub show_size: bool,
     pub show_progress: bool,
+    pub show_headers: bool,
     pub use_scraper: bool,
     pub follow_redirects: bool,
     pub timeout: Duration,

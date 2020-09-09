@@ -1,4 +1,4 @@
-use super::arguments::{Arguments, ArgumentsBuilder,CodesVerification, RangeSizeVerification};
+use super::arguments::{Arguments, CodesVerification, RangeSizeVerification};
 use clap::{ArgMatches, Values};
 use regex::Regex;
 use reqwest::Proxy;
@@ -16,33 +16,33 @@ impl<'a> ArgumentsParser<'a> {
     }
 
     pub fn parse_args(&self) -> Arguments {
-        let wordlist_path = self.value_of("wordlist").unwrap();
+        let wordlist_path = self.value_of("wordlist").unwrap().to_string();
         let threads: usize = self.value_of("threads").unwrap().parse().unwrap();
 
-        return ArgumentsBuilder::default()
-            .check_ssl(!self.is_present("insecure"))
-            .codes_verification(self.codes_verification())
-            .expand_path(self.is_present("expand-path"))
-            .follow_redirects(self.is_present("follow-redirects"))
-            .headers(self.headers())
-            .out_file_json(self.out_file_path())
-            .proxy(self.proxy())
-            .regex_verification(self.regex_verification())
-            .size_range_verification(self.parse_range_sizes_verification())
-            .show_status(self.is_present("status"))
-            .show_progress(self.is_present("progress"))
-            .show_size(self.is_present("size"))
-            .threads(threads)
-            .timeout(self.timeout())
-            .urls(self.value_of("url").unwrap().to_string())
-            .use_scraper(self.is_present("scraper"))
-            .user_agent(self.value_of("user-agent").unwrap().to_string())
-            .verbosity(self.matches.occurrences_of("verbosity") as usize)
-            .wordlist(wordlist_path.to_string())
-            .build().expect("Error building arguments");
-
+        return Arguments {
+            threads: threads,
+            urls: self.value_of("url").unwrap().to_string(),
+            wordlist: wordlist_path,
+            out_file_json: self.out_file_path(),
+            proxy: self.proxy(),
+            check_ssl: !self.is_present("insecure"),
+            expand_path: self.is_present("expand-path"),
+            codes_verification: self.codes_verification(),
+            regex_verification: self.regex_verification(),
+            size_range_verification: self.parse_range_sizes_verification(),
+            user_agent: self.value_of("user-agent").unwrap().to_string(),
+            show_status: self.is_present("status"),
+            show_size: self.is_present("size"),
+            show_progress: self.is_present("progress"),
+            show_headers: self.is_present("show-headers"),
+            use_scraper: self.is_present("scraper"),
+            follow_redirects: self.is_present("follow-redirects"),
+            timeout: self.timeout(),
+            headers: self.headers(),
+            verbosity: self.matches.occurrences_of("verbosity") as usize
+        };
     }
-
+        
     fn out_file_path(&self) -> Option<String> {
         return Some(self.value_of("out-file")?.to_string());
     }
