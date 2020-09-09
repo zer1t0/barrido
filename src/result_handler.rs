@@ -105,12 +105,7 @@ impl ResultHandler {
     }
 
     fn handle_valid(&mut self, answer: Answer) {
-        self.printer.print_path(
-            &answer.url,
-            answer.status,
-            answer.size,
-        );
-
+        self.printer.print_answer(&answer);
         self.results.push(answer);
     }
 

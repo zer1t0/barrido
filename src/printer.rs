@@ -1,5 +1,6 @@
-use reqwest::Url;
 use log::warn;
+
+use crate::communication::result_channel::{Answer};
 
 pub struct Printer {
     show_status: bool,
@@ -34,20 +35,19 @@ impl Printer {
         };
     }
 
-    pub fn print_path(&self, url: &Url, status: u16, body_length: usize) {
-        let path;
-        if self.expand_path {
-            path = url.as_str();
+    pub fn print_answer(&self, answer: &Answer) {
+        let path = if self.expand_path {
+            answer.url.as_str()
         } else {
-            path = url.path();
-        }
+            answer.url.path()
+        };
 
         let mut line = format!("{}", path);
         if self.show_status {
-            line += format!(" {}", status).as_str();
+            line = format!("{} {}", line, answer.status);
         }
         if self.show_size {
-            line += format!(" {}", body_length).as_str();
+            line = format!("{} {}", line, answer.size);
         }
 
         eprint!("{}", self.cleaner_str);

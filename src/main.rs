@@ -49,6 +49,7 @@ use crate::scraper::{
     EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
 use stderrlog;
+use log::{info, warn};
 
 
 fn main() {
@@ -99,6 +100,7 @@ fn main() {
     );
 
     if let Some(out_file_path) = &args.out_file_json {
+        info!("Saving json results in {}", out_file_path);
         JsonResultSaver::save_results(&results, out_file_path);
     }
 }
@@ -192,7 +194,7 @@ fn parse_urls(urls: &str) -> Vec<Url> {
                 match Url::parse(&url_str) {
                     Ok(url) => base_urls.push(url),
                     Err(_) => {
-                        println!("[X] {} is not a valid URL", url_str);
+                        warn!("[X] {} is not a valid URL", url_str);
                         std::process::exit(-1);
                     }
                 }
@@ -207,7 +209,7 @@ fn parse_urls(urls: &str) -> Vec<Url> {
             if let Ok(base_url) = Url::parse(&url_str) {
                 base_urls.push(base_url);
             } else {
-                println!("[X] {} is not a valid URL", url_str);
+                warn!("[X] {} is not a valid URL", url_str);
                 std::process::exit(-1);
             }
         }
