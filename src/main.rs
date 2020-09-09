@@ -18,7 +18,7 @@ use crossbeam_channel;
 
 use crate::http::HttpOptions;
 use crate::verificator::{
-    CodesVerificator, OrVerificator, RegexVerificator, SizeVerificator,
+    BodyRegexVerificator, CodesVerificator, OrVerificator, SizeVerificator,
     TrueVerificator, Verificator,
 };
 
@@ -153,7 +153,7 @@ fn generate_regex_verificator(
     regex_verification: &Option<Regex>,
 ) -> Verificator {
     match regex_verification {
-        Some(filter_regex) => !RegexVerificator::new(filter_regex.clone()),
+        Some(filter_regex) => !BodyRegexVerificator::new(filter_regex.clone()),
         None => TrueVerificator::new(),
     }
 }
