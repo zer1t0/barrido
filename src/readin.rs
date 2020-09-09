@@ -1,3 +1,4 @@
+use log::warn;
 use std::fs::File;
 use std::io::Lines;
 use std::io::{BufRead, BufReader};
@@ -17,12 +18,17 @@ pub fn read_inputs(inputs: Vec<String>) -> impl Iterator<Item = String> {
 pub struct FileStringIter {
     items: Vec<String>,
     lines: Option<Lines<BufReader<File>>>,
+    current_path: String,
 }
 
 impl FileStringIter {
     pub fn new(mut items: Vec<String>) -> Self {
         items.reverse();
-        return Self { items, lines: None };
+        return Self {
+            items,
+            lines: None,
+            current_path: "".to_string(),
+        };
     }
 }
 
@@ -33,7 +39,20 @@ impl Iterator for FileStringIter {
         loop {
             if let Some(lines) = &mut self.lines {
                 if let Some(line) = lines.next() {
-                    return Some(line.expect("Error reading input"));
+                    match line {
+                        Ok(line) => {
+                            return Some(line);
+                        }
+                        Err(err) => {
+                            warn!("Error reading lines in {}: {}. '{}' is taken as URL path ",
+                                  self.current_path, err, self.current_path);
+                            self.lines = None;
+                            let current_path = self.current_path.clone();
+                            self.current_path = "".to_string();
+                            self.lines = None;
+                            return Some(current_path);
+                        }
+                    }
                 } else {
                     self.lines = None;
                 }
@@ -43,6 +62,7 @@ impl Iterator for FileStringIter {
 
             match File::open(&item) {
                 Ok(file) => {
+                    self.current_path = item;
                     self.lines = Some(BufReader::new(file).lines());
                 }
                 Err(_) => {
