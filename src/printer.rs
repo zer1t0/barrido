@@ -67,7 +67,7 @@ impl Printer {
                 let str_value = if let Ok(value) = value.to_str() {
                     value
                 } else {
-                    "Yanked"
+                    "---- No ASCII Header ----"
                 };
                 
                 line = format!("{}\n{}: {}", line, name, str_value);
