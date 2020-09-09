@@ -16,13 +16,12 @@ impl<'a> ArgumentsParser<'a> {
     }
 
     pub fn parse_args(&self) -> Arguments {
-        let wordlist_path = self.value_of("wordlist").unwrap().to_string();
         let threads: usize = self.value_of("threads").unwrap().parse().unwrap();
 
         return Arguments {
             threads: threads,
             urls: self.value_of("url").unwrap().to_string(),
-            wordlist: wordlist_path,
+            wordlist: self.wordlist(),
             out_file_json: self.out_file_path(),
             proxy: self.proxy(),
             check_ssl: !self.is_present("insecure"),
@@ -41,6 +40,13 @@ impl<'a> ArgumentsParser<'a> {
             headers: self.headers(),
             verbosity: self.matches.occurrences_of("verbosity") as usize
         };
+    }
+
+    fn wordlist(&self) -> String {
+        match self.value_of("wordlist") {
+            Some(value) => value.to_string(),
+            None => "".to_string()
+        }
     }
         
     fn out_file_path(&self) -> Option<String> {

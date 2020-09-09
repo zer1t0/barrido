@@ -9,7 +9,7 @@ pub fn read_inputs(inputs: Vec<String>) -> impl Iterator<Item = String> {
     let input_iter = Box::new(FileStringIter::new(inputs));
     return input_iter
         .map(|s| s.trim().to_string())
-        .filter(|s| s.len() != 0 && !s.starts_with("#"));
+        .filter(|s| !s.starts_with("#"));
 }
 
 /// Class to read a bunch of strings that could be filenames.

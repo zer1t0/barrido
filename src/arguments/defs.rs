@@ -14,9 +14,10 @@ pub fn args() -> App<'static, 'static> {
         )
         .arg(
             Arg::with_name("wordlist")
+                .long("wordlist")
+                .short("w")
                 .takes_value(true)
-                .help("list of paths")
-                .required(true),
+                .help("File with paths"),
         )
         .arg(
             Arg::with_name("threads")

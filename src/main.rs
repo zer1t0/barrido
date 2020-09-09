@@ -1,11 +1,11 @@
+mod actors;
 mod arguments;
+mod communication;
+mod http;
 mod printer;
 mod readin;
 mod result_handler;
 mod result_saver;
-mod actors;
-mod communication;
-mod http;
 mod scraper;
 mod verificator;
 
@@ -34,9 +34,7 @@ use std::sync::Arc;
 use std::thread;
 use threadpool::ThreadPool;
 
-use crate::actors::{
-    EndChecker, Requester, ResponseHandler, UrlAggregator,
-};
+use crate::actors::{EndChecker, Requester, ResponseHandler, UrlAggregator};
 use crate::communication::result_channel::{
     ResultChannel, ResultReceiver, ResultSender,
 };
@@ -48,9 +46,8 @@ use crate::communication::{
 use crate::scraper::{
     EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
-use stderrlog;
 use log::{info, warn};
-
+use stderrlog;
 
 fn main() {
     let args = Arguments::parse_args();
@@ -77,7 +74,7 @@ fn main() {
         verificator,
         url_client,
         base_urls,
-        paths
+        paths,
     );
 
     let (signal_sender, signal_receiver) = crossbeam_channel::unbounded::<()>();
@@ -114,8 +111,17 @@ fn init_log(verbosity: usize) {
         .expect("Error initiating log");
 }
 
+/// Function to read the paths or file of paths given.
+/// It returns a vector of non duplicate paths. Vector is used
+/// instead of HashSet to keep the original order of the paths.
 fn get_paths(paths: Vec<String>) -> Vec<String> {
-    readin::read_inputs(paths).collect()
+    let mut resolved_paths = Vec::new();
+    for path in readin::read_inputs(paths) {
+        if !resolved_paths.contains(&path) {
+            resolved_paths.push(path);
+        }
+    }
+    return resolved_paths;
 }
 
 fn generate_verificator(
@@ -386,7 +392,10 @@ pub struct Discoverer {
 }
 
 impl Discoverer {
-    fn new(result_channel_receiver: ResultReceiver, end_channel_receiver: Receiver<()>) -> Self {
+    fn new(
+        result_channel_receiver: ResultReceiver,
+        end_channel_receiver: Receiver<()>,
+    ) -> Self {
         return Self {
             result_channel_receiver,
             end_channel_receiver,
