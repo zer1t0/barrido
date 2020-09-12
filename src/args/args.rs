@@ -9,50 +9,6 @@ use reqwest::Proxy;
 use std::collections::HashMap;
 use std::time::Duration;
 
-#[derive(Clone)]
-pub enum CodesVerification {
-    ValidCodes(Vec<u16>),
-    InvalidCodes(Vec<u16>),
-}
-
-impl Into<Verificator> for CodesVerification {
-    fn into(self) -> Verificator {
-        match self {
-            CodesVerification::ValidCodes(codes) => {
-                CodesVerificator::new(codes)
-            }
-            CodesVerification::InvalidCodes(codes) => {
-                !CodesVerificator::new(codes)
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub enum RangeSizeVerification {
-    MatchSize(Vec<(usize, usize)>),
-    FilterSize(Vec<(usize, usize)>),
-}
-
-impl Into<Verificator> for RangeSizeVerification {
-    fn into(self) -> Verificator {
-        match self {
-            RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
-                ranges
-                    .iter()
-                    .map(|r| SizeVerificator::new_range(r.0, r.1))
-                    .collect(),
-            ),
-            RangeSizeVerification::FilterSize(ranges) => !OrVerificator::new(
-                ranges
-                    .iter()
-                    .map(|r| SizeVerificator::new_range(r.0, r.1))
-                    .collect(),
-            ),
-        }
-    }
-}
-
 /// Class used to store the arguments provided by the user.
 #[derive(Clone)]
 pub struct Args {
@@ -287,5 +243,50 @@ impl Into<HttpOptions> for Args {
             self.timeout,
             self.headers,
         );
+    }
+}
+
+
+#[derive(Clone)]
+pub enum CodesVerification {
+    ValidCodes(Vec<u16>),
+    InvalidCodes(Vec<u16>),
+}
+
+impl Into<Verificator> for CodesVerification {
+    fn into(self) -> Verificator {
+        match self {
+            CodesVerification::ValidCodes(codes) => {
+                CodesVerificator::new(codes)
+            }
+            CodesVerification::InvalidCodes(codes) => {
+                !CodesVerificator::new(codes)
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum RangeSizeVerification {
+    MatchSize(Vec<(usize, usize)>),
+    FilterSize(Vec<(usize, usize)>),
+}
+
+impl Into<Verificator> for RangeSizeVerification {
+    fn into(self) -> Verificator {
+        match self {
+            RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
+                ranges
+                    .iter()
+                    .map(|r| SizeVerificator::new_range(r.0, r.1))
+                    .collect(),
+            ),
+            RangeSizeVerification::FilterSize(ranges) => !OrVerificator::new(
+                ranges
+                    .iter()
+                    .map(|r| SizeVerificator::new_range(r.0, r.1))
+                    .collect(),
+            ),
+        }
     }
 }
