@@ -48,7 +48,7 @@ impl Args {
             wordlist: wordlist(&matches),
             out_file_json: out_file_path(&matches),
             proxy: proxy(&matches),
-            check_ssl: !matches.is_present("insecure"),
+            check_ssl: matches.is_present("check-ssl"),
             expand_path: matches.is_present("expand-path"),
             codes_verification: codes_verification(&matches),
             regex_verification: regex_verification(&matches),
