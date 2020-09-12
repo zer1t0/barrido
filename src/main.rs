@@ -18,8 +18,8 @@ use crossbeam_channel;
 
 use crate::http::HttpOptions;
 use crate::verificator::{
-    BodyRegexVerificator, CodesVerificator, OrVerificator, SizeVerificator,
-    TrueVerificator, Verificator,
+    BodyRegexVerificator, CodesVerificator, HeaderRegexVerificator,
+    OrVerificator, SizeVerificator, TrueVerificator, Verificator,
 };
 
 use printer::Printer;
@@ -57,6 +57,7 @@ fn main() {
     let verificator = generate_verificator(
         &args.codes_verification,
         &args.regex_verification,
+        args.valid_header_regex_verification,
         &args.size_range_verification,
     );
 
@@ -127,13 +128,20 @@ fn get_paths(paths: Vec<String>) -> Vec<String> {
 fn generate_verificator(
     codes_verification: &CodesVerification,
     regex_verification: &Option<Regex>,
+    valid_header_regex_verification: Option<(Regex, Regex)>,
     range_size_verification: &Option<RangeSizeVerification>,
 ) -> Verificator {
     let codes_verificator = generate_codes_verificator(codes_verification);
     let regex_verificator = generate_regex_verificator(regex_verification);
+    let valid_header_verificator = generate_valid_header_regex_verificator(
+        valid_header_regex_verification,
+    );
     let sizes_verificator = generate_sizes_verificator(range_size_verification);
 
-    return codes_verificator & regex_verificator & sizes_verificator;
+    return codes_verificator
+        & regex_verificator
+        & valid_header_verificator
+        & sizes_verificator;
 }
 
 fn generate_codes_verificator(
@@ -155,6 +163,16 @@ fn generate_regex_verificator(
     match regex_verification {
         Some(filter_regex) => !BodyRegexVerificator::new(filter_regex.clone()),
         None => TrueVerificator::new(),
+    }
+}
+
+fn generate_valid_header_regex_verificator(
+    header_regex: Option<(Regex, Regex)>,
+) -> Verificator {
+    if let Some(header_regex) = header_regex {
+        return HeaderRegexVerificator::new(header_regex.0, header_regex.1);
+    } else {
+        return TrueVerificator::new();
     }
 }
 

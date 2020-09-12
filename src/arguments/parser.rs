@@ -159,7 +159,7 @@ impl<'a> ArgumentsParser<'a> {
 
         if parts.len() == 1 {
             return Some((
-                Regex::new(parts[0]).unwrap(),
+                new_insensitive_regex(parts[0]),
                 Regex::new(".*").unwrap(),
             ));
         }
@@ -168,7 +168,7 @@ impl<'a> ArgumentsParser<'a> {
         let name_regex = if name == "" {
             Regex::new(".*").unwrap()
         } else {
-            Regex::new(name).unwrap()
+            new_insensitive_regex(name)
         };
 
         let value = parts.join(":");
@@ -210,4 +210,8 @@ impl<'a> ArgumentsParser<'a> {
     fn is_present(&self, k: &str) -> bool {
         return self.matches.is_present(k);
     }
+}
+
+fn new_insensitive_regex(v: &str) -> Regex {
+    Regex::new(&format!("(?i){}", v)).unwrap()
 }
