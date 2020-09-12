@@ -10,8 +10,8 @@ pub fn args() -> App<'static, 'static> {
         .arg(
             Arg::with_name("url")
                 .takes_value(true)
-                .help("url to load")
-                .required(true),
+                .multiple(true)
+                .help("url to load"),
         )
         .arg(
             Arg::with_name("wordlist")

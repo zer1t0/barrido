@@ -1,15 +1,67 @@
 use log::warn;
 use std::fs::File;
 use std::io::Lines;
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, Stdin};
 
 /// Function to read the inputs from files, strings or stdin
 /// in a normalized iterator of strings.
-pub fn read_inputs(inputs: Vec<String>) -> impl Iterator<Item = String> {
-    let input_iter = Box::new(FileStringIter::new(inputs));
-    return input_iter
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.starts_with("#"));
+pub fn read_inputs(
+    inputs: Vec<String>,
+    use_stdin: bool,
+    filter_blanks: bool,
+) -> impl Iterator<Item = String> {
+    let mut input_iter: Box<dyn Iterator<Item = String>>;
+    input_iter = if inputs.len() == 0 && use_stdin {
+        Box::new(StdinIter::new())
+    } else {
+        Box::new(FileStringIter::new(inputs))
+    };
+    
+    input_iter = Box::new(input_iter.map(|s| s.trim().to_string()));    
+
+    input_iter = if filter_blanks {
+        Box::new(input_iter.filter(|s| s.len() != 0))
+    } else {
+        input_iter
+    };
+
+    return input_iter.filter(|s| !s.starts_with("#"));
+}
+
+/// Class to get an iterator of stdin lines, since
+/// io::stdin().lock().lines() gives problems with lifetimes.
+pub struct StdinIter {
+    stdin: Stdin,
+}
+
+impl StdinIter {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Iterator for StdinIter {
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut line = String::new();
+        match self.stdin.read_line(&mut line) {
+            Ok(n) => {
+                if n == 0 {
+                    // EOF
+                    return None;
+                }
+                return Some(line);
+            }
+            Err(_) => return None,
+        }
+    }
+}
+
+impl Default for StdinIter {
+    fn default() -> Self {
+        Self { stdin: io::stdin() }
+    }
 }
 
 /// Class to read a bunch of strings that could be filenames.

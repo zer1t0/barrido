@@ -11,8 +11,6 @@ mod verificator;
 
 use ctrlc;
 use regex::Regex;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 
 use crossbeam_channel;
 
@@ -60,9 +58,8 @@ fn main() {
         args.size_range_verification,
     );
 
-    let paths: Vec<String> = get_paths(vec![args.wordlist]);
-
-    let base_urls = parse_urls(&args.urls);
+    let paths: Vec<String> = read_paths(vec![args.wordlist]);
+    let base_urls = read_urls(args.urls);
 
     let max_requests_count = paths.len() * base_urls.len();
 
@@ -114,14 +111,34 @@ fn init_log(verbosity: usize) {
 /// Function to read the paths or file of paths given.
 /// It returns a vector of non duplicate paths. Vector is used
 /// instead of HashSet to keep the original order of the paths.
-fn get_paths(paths: Vec<String>) -> Vec<String> {
+fn read_paths(paths: Vec<String>) -> Vec<String> {
     let mut resolved_paths = Vec::new();
-    for path in readin::read_inputs(paths) {
+    for path in readin::read_inputs(paths, false, false) {
         if !resolved_paths.contains(&path) {
             resolved_paths.push(path);
         }
     }
     return resolved_paths;
+}
+
+/// Read urls from string or file
+fn read_urls(urls: Vec<String>) -> Vec<Url> {
+    let mut base_urls = Vec::new();
+
+    for url_str in readin::read_inputs(urls, true, true) {
+        match Url::parse(&url_str) {
+            Ok(url) => {
+                if !base_urls.contains(&url) {
+                    base_urls.push(url);
+                }
+            }
+            Err(_) => {
+                warn!("[X] {} is not a valid URL", url_str);
+                std::process::exit(-1);
+            }
+        }
+    }
+    return base_urls;
 }
 
 fn gen_verificator(
@@ -151,40 +168,6 @@ fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {
             .expect("SignalHandler: error sending signal");
     })
     .unwrap();
-}
-
-/// Read urls from string or file
-fn parse_urls(urls: &str) -> Vec<Url> {
-    let mut base_urls = Vec::new();
-    match File::open(urls) {
-        Ok(urls_file) => {
-            let file_reader = BufReader::new(urls_file);
-            for line in file_reader.lines() {
-                let url_str = line.unwrap();
-                match Url::parse(&url_str) {
-                    Ok(url) => base_urls.push(url),
-                    Err(_) => {
-                        warn!("[X] {} is not a valid URL", url_str);
-                        std::process::exit(-1);
-                    }
-                }
-            }
-        }
-        Err(_) => {
-            let mut url_str = urls.to_string();
-
-            if !url_str.ends_with("/") {
-                url_str.push('/');
-            }
-            if let Ok(base_url) = Url::parse(&url_str) {
-                base_urls.push(base_url);
-            } else {
-                warn!("[X] {} is not a valid URL", url_str);
-                std::process::exit(-1);
-            }
-        }
-    };
-    return base_urls;
 }
 
 fn spawn_actors(

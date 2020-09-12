@@ -13,7 +13,7 @@ use std::time::Duration;
 #[derive(Clone)]
 pub struct Args {
     pub threads: usize,
-    pub urls: String,
+    pub urls: Vec<String>,
     pub wordlist: String,
     pub out_file_json: Option<String>,
     pub proxy: Option<Proxy>,
@@ -44,7 +44,7 @@ impl Args {
 
         return Args {
             threads: threads,
-            urls: matches.value_of("url").unwrap().to_string(),
+            urls: urls(&matches),
             wordlist: wordlist(&matches),
             out_file_json: out_file_path(&matches),
             proxy: proxy(&matches),
@@ -191,6 +191,13 @@ fn timeout(matches: &ArgMatches) -> Duration {
         matches.value_of("timeout").unwrap().parse().unwrap();
 
     return Duration::from_secs(timeout_secs as u64);
+}
+
+fn urls(matches: &ArgMatches) -> Vec<String> {
+    match matches.values_of("url") {
+        None => Vec::new(),
+        Some(urls) => urls.map(|u| u.to_string()).collect()
+    }
 }
 
 fn valid_header_regex(matches: &ArgMatches) -> Option<(Regex, Regex)> {
