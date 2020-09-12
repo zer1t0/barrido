@@ -1,6 +1,9 @@
 use super::defs::args;
 use super::parser::ArgumentsParser;
 use crate::http::HttpOptions;
+use crate::verificator::{
+    CodesVerificator, OrVerificator, SizeVerificator, Verificator,
+};
 use regex::Regex;
 use reqwest::Proxy;
 use std::collections::HashMap;
@@ -12,10 +15,42 @@ pub enum CodesVerification {
     InvalidCodes(Vec<u16>),
 }
 
+impl Into<Verificator> for CodesVerification {
+    fn into(self) -> Verificator {
+        match self {
+            CodesVerification::ValidCodes(codes) => {
+                CodesVerificator::new(codes)
+            }
+            CodesVerification::InvalidCodes(codes) => {
+                !CodesVerificator::new(codes)
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum RangeSizeVerification {
     MatchSize(Vec<(usize, usize)>),
     FilterSize(Vec<(usize, usize)>),
+}
+
+impl Into<Verificator> for RangeSizeVerification {
+    fn into(self) -> Verificator {
+        match self {
+            RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
+                ranges
+                    .iter()
+                    .map(|r| SizeVerificator::new_range(r.0, r.1))
+                    .collect(),
+            ),
+            RangeSizeVerification::FilterSize(ranges) => !OrVerificator::new(
+                ranges
+                    .iter()
+                    .map(|r| SizeVerificator::new_range(r.0, r.1))
+                    .collect(),
+            ),
+        }
+    }
 }
 
 /// Class used to store the arguments provided by the user.

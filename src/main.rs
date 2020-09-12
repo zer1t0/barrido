@@ -18,8 +18,7 @@ use crossbeam_channel;
 
 use crate::http::HttpOptions;
 use crate::verificator::{
-    BodyRegexVerificator, CodesVerificator, HeaderRegexVerificator,
-    OrVerificator, SizeVerificator, Verificator,
+    BodyRegexVerificator, HeaderRegexVerificator, Verificator,
 };
 
 use printer::Printer;
@@ -131,49 +130,18 @@ fn gen_verificator(
     valid_header_regex_verification: Option<(Regex, Regex)>,
     range_size_verification: Option<RangeSizeVerification>,
 ) -> Verificator {
-    let codes_verificator = gen_codes_verificator(codes_verification);
+    let codes_verificator: Verificator = codes_verification.into();
     let valid_body_verificator =
         valid_body_regex_verification.map(|r| !BodyRegexVerificator::new(r));
     let valid_header_verificator = valid_header_regex_verification
         .map(|hr| HeaderRegexVerificator::new(hr.0, hr.1));
-    let sizes_verificator = gen_sizes_verificator(range_size_verification);
+    let sizes_verificator: Option<Verificator> =
+        range_size_verification.map(|rs| rs.into());
 
     return codes_verificator
         & valid_body_verificator
         & valid_header_verificator
         & sizes_verificator;
-}
-
-fn gen_codes_verificator(
-    codes_verification: CodesVerification,
-) -> Verificator {
-    match codes_verification {
-        CodesVerification::ValidCodes(codes) => {
-            CodesVerificator::new(codes)
-        }
-        CodesVerification::InvalidCodes(codes) => {
-            !CodesVerificator::new(codes)
-        }
-    }
-}
-
-fn gen_sizes_verificator(
-    range_size_verification: Option<RangeSizeVerification>,
-) -> Option<Verificator> {
-    match range_size_verification? {
-        RangeSizeVerification::MatchSize(ranges) => Some(OrVerificator::new(
-            ranges
-                .iter()
-                .map(|r| SizeVerificator::new_range(r.0, r.1))
-                .collect(),
-        )),
-        RangeSizeVerification::FilterSize(ranges) => Some(!OrVerificator::new(
-            ranges
-                .iter()
-                .map(|r| SizeVerificator::new_range(r.0, r.1))
-                .collect(),
-        )),
-    }
 }
 
 fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {
