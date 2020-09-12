@@ -28,6 +28,7 @@ impl<'a> ArgumentsParser<'a> {
             expand_path: self.is_present("expand-path"),
             codes_verification: self.codes_verification(),
             regex_verification: self.regex_verification(),
+            valid_header_regex_verification: self.valid_header_regex(),
             size_range_verification: self.parse_range_sizes_verification(),
             user_agent: self.value_of("user-agent").unwrap().to_string(),
             show_status: self.is_present("status"),
@@ -38,17 +39,17 @@ impl<'a> ArgumentsParser<'a> {
             follow_redirects: self.is_present("follow-redirects"),
             timeout: self.timeout(),
             headers: self.headers(),
-            verbosity: self.matches.occurrences_of("verbosity") as usize
+            verbosity: self.matches.occurrences_of("verbosity") as usize,
         };
     }
 
     fn wordlist(&self) -> String {
         match self.value_of("wordlist") {
             Some(value) => value.to_string(),
-            None => "".to_string()
+            None => "".to_string(),
         }
     }
-        
+
     fn out_file_path(&self) -> Option<String> {
         return Some(self.value_of("out-file")?.to_string());
     }
@@ -149,6 +150,35 @@ impl<'a> ArgumentsParser<'a> {
             );
         }
         return None;
+    }
+
+    fn valid_header_regex(&self) -> Option<(Regex, Regex)> {
+        let value = self.value_of("valid-header")?;
+
+        let mut parts: Vec<&str> = value.split(":").collect();
+
+        if parts.len() == 1 {
+            return Some((
+                Regex::new(parts[0]).unwrap(),
+                Regex::new(".*").unwrap(),
+            ));
+        }
+
+        let name = parts.remove(0);
+        let name_regex = if name == "" {
+            Regex::new(".*").unwrap()
+        } else {
+            Regex::new(name).unwrap()
+        };
+
+        let value = parts.join(":");
+        let value_regex = if value == "" {
+            Regex::new(".*").unwrap()
+        } else {
+            Regex::new(&value).unwrap()
+        };
+
+        return Some((name_regex, value_regex));
     }
 
     fn headers(&self) -> HashMap<String, String> {

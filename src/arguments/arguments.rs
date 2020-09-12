@@ -30,6 +30,7 @@ pub struct Arguments {
     pub expand_path: bool,
     pub codes_verification: CodesVerification,
     pub regex_verification: Option<Regex>,
+    pub valid_header_regex_verification: Option<(Regex, Regex)>,
     pub size_range_verification: Option<RangeSizeVerification>,
     pub user_agent: String,
     pub show_status: bool,

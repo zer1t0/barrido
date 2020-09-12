@@ -1,5 +1,6 @@
 use clap::{App, Arg};
 use reqwest::Proxy;
+use regex::Regex;
 
 pub fn args() -> App<'static, 'static> {
     App::new(env!("CARGO_PKG_NAME"))
@@ -71,6 +72,13 @@ pub fn args() -> App<'static, 'static> {
                 .help("Regex to match invalid responses")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("valid-header")
+                .long("valid-header")
+                .help("Regex to match headers. In form .*:.* to match header name and value")
+                .takes_value(true)
+                .validator(is_header_regex),
+        )        
         .arg(
             Arg::with_name("user-agent")
                 .long("user-agent")
@@ -162,6 +170,33 @@ pub fn args() -> App<'static, 'static> {
                 .validator(is_usize_or_range)
                 .conflicts_with_all(&["match-size"]),
         )
+}
+
+fn is_header_regex(v: String) -> Result<(), String> {
+    let mut parts: Vec<&str> = v.split(":").collect();
+
+    if parts.len() == 1 {
+        return is_regex(parts[0].to_string());
+    }
+
+    let name_regex = parts.remove(0);
+    if name_regex != "" {
+        is_regex(name_regex.to_string())?;
+    }
+
+    let value_regex = parts.join(":");
+    if &value_regex != "" {
+        is_regex(value_regex)?;
+    }
+
+    return Ok(());
+}
+
+fn is_regex(v: String) -> Result<(), String> {
+    match Regex::new(&v) {
+        Ok(_) => Ok(()),
+        Err(_) => Err(format!("Invalid regex: '{}'", v))
+    }
 }
 
 fn is_proxy(v: String) -> Result<(), String> {
