@@ -19,6 +19,8 @@ use crate::verificator::{
     BodyRegexVerificator, HeaderRegexVerificator, Verificator,
 };
 
+use std::collections::HashSet;
+
 use printer::Printer;
 use reqwest::Url;
 use result_handler::ResultHandler;
@@ -110,13 +112,17 @@ fn init_log(verbosity: usize) {
 }
 
 /// Function to read the paths or file of paths given.
-/// It returns a vector of non duplicate paths. Vector is used
-/// instead of HashSet to keep the original order of the paths.
+/// It returns a vector of non duplicate paths. 
 fn read_paths(paths: Vec<String>) -> Vec<String> {
+    // to keep paths order
     let mut resolved_paths = Vec::new();
+
+    // to increase check speed and remove duplicates in large wordlists
+    let mut paths_set = HashSet::new(); 
     for path in readin::read_inputs(paths, false, false) {
-        if !resolved_paths.contains(&path) {
-            resolved_paths.push(path);
+        if !paths_set.contains(&path) {
+            resolved_paths.push(path.clone());
+            paths_set.insert(path);
         }
     }
     return resolved_paths;
@@ -179,7 +185,7 @@ fn spawn_actors(
     base_urls: Vec<Url>,
     paths: Vec<String>,
 ) -> Discoverer {
-    let response_handlers_count = 10;
+    let response_handlers_count = 1;
     let scraper = create_scraper(use_scraper);
     let response_handlers_wait_mutexes =
         new_wait_mutex_vec(response_handlers_count);
