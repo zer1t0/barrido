@@ -54,11 +54,11 @@ fn main() {
     init_log(args.verbosity);
 
     let http_options: HttpOptions = args.clone().into();
-    let verificator = generate_verificator(
-        &args.codes_verification,
-        &args.regex_verification,
+    let verificator = gen_verificator(
+        args.codes_verification,
+        args.regex_verification,
         args.valid_header_regex_verification,
-        &args.size_range_verification,
+        args.size_range_verification,
     );
 
     let paths: Vec<String> = get_paths(vec![args.wordlist]);
@@ -125,79 +125,55 @@ fn get_paths(paths: Vec<String>) -> Vec<String> {
     return resolved_paths;
 }
 
-fn generate_verificator(
-    codes_verification: &CodesVerification,
-    regex_verification: &Option<Regex>,
+fn gen_verificator(
+    codes_verification: CodesVerification,
+    valid_body_regex_verification: Option<Regex>,
     valid_header_regex_verification: Option<(Regex, Regex)>,
-    range_size_verification: &Option<RangeSizeVerification>,
+    range_size_verification: Option<RangeSizeVerification>,
 ) -> Verificator {
-    let codes_verificator = generate_codes_verificator(codes_verification);
-    let regex_verificator = generate_regex_verificator(regex_verification);
-    let valid_header_verificator = generate_valid_header_regex_verificator(
-        valid_header_regex_verification,
-    );
-    let sizes_verificator = generate_sizes_verificator(range_size_verification);
+    let codes_verificator = gen_codes_verificator(codes_verification);
+    let valid_body_verificator =
+        valid_body_regex_verification.map(|r| !BodyRegexVerificator::new(r));
+    let valid_header_verificator = valid_header_regex_verification
+        .map(|hr| HeaderRegexVerificator::new(hr.0, hr.1));
+    let sizes_verificator = gen_sizes_verificator(range_size_verification);
 
     return codes_verificator
-        & regex_verificator
+        & valid_body_verificator
         & valid_header_verificator
         & sizes_verificator;
 }
 
-fn generate_codes_verificator(
-    codes_verification: &CodesVerification,
+fn gen_codes_verificator(
+    codes_verification: CodesVerification,
 ) -> Verificator {
     match codes_verification {
         CodesVerification::ValidCodes(codes) => {
-            CodesVerificator::new(codes.clone())
+            CodesVerificator::new(codes)
         }
         CodesVerification::InvalidCodes(codes) => {
-            !CodesVerificator::new(codes.clone())
+            !CodesVerificator::new(codes)
         }
     }
 }
 
-fn generate_regex_verificator(
-    regex_verification: &Option<Regex>,
-) -> Verificator {
-    match regex_verification {
-        Some(filter_regex) => !BodyRegexVerificator::new(filter_regex.clone()),
-        None => TrueVerificator::new(),
+fn gen_sizes_verificator(
+    range_size_verification: Option<RangeSizeVerification>,
+) -> Option<Verificator> {
+    match range_size_verification? {
+        RangeSizeVerification::MatchSize(ranges) => Some(OrVerificator::new(
+            ranges
+                .iter()
+                .map(|r| SizeVerificator::new_range(r.0, r.1))
+                .collect(),
+        )),
+        RangeSizeVerification::FilterSize(ranges) => Some(!OrVerificator::new(
+            ranges
+                .iter()
+                .map(|r| SizeVerificator::new_range(r.0, r.1))
+                .collect(),
+        )),
     }
-}
-
-fn generate_valid_header_regex_verificator(
-    header_regex: Option<(Regex, Regex)>,
-) -> Verificator {
-    if let Some(header_regex) = header_regex {
-        return HeaderRegexVerificator::new(header_regex.0, header_regex.1);
-    } else {
-        return TrueVerificator::new();
-    }
-}
-
-fn generate_sizes_verificator(
-    range_size_verification: &Option<RangeSizeVerification>,
-) -> Verificator {
-    let range_verificator = match range_size_verification {
-        Some(size_range_verification) => match size_range_verification {
-            RangeSizeVerification::MatchSize(ranges) => OrVerificator::new(
-                ranges
-                    .iter()
-                    .map(|r| SizeVerificator::new_range(r.0, r.1))
-                    .collect(),
-            ),
-            RangeSizeVerification::FilterSize(ranges) => !OrVerificator::new(
-                ranges
-                    .iter()
-                    .map(|r| SizeVerificator::new_range(r.0, r.1))
-                    .collect(),
-            ),
-        },
-        None => TrueVerificator::new(),
-    };
-
-    return range_verificator;
 }
 
 fn spawn_signal_handler(sender: crossbeam_channel::Sender<()>) {

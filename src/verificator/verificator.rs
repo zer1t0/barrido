@@ -19,11 +19,34 @@ impl BitAnd for Verificator {
     }
 }
 
+impl BitAnd<Option<Verificator>> for Verificator {
+    type Output = Self;
+
+    fn bitand(self, rhs: Option<Self>) -> Self {
+        match rhs {
+            Some(v) => self & v,
+            None => self 
+        }
+    }
+}
+
 impl BitOr for Verificator {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self {
         return OrVerificator::new(vec![self, rhs]);
+    }
+}
+
+
+impl BitOr<Option<Verificator>> for Verificator {
+    type Output = Self;
+
+    fn bitor(self, rhs: Option<Self>) -> Self {
+        match rhs {
+            Some(v) => self | v,
+            None => self
+        }
     }
 }
 
