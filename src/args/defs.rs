@@ -45,10 +45,10 @@ pub fn args() -> App<'static, 'static> {
                 .help("Specify proxy in format: http[s]://<host>[:<port>]"),
         )
         .arg(
-            Arg::with_name("insecure")
-                .long("insecure")
-                .short("k")
-                .help("Allow insecure connections when using SSL"),
+            Arg::with_name("check-ssl")
+                .long("secure")
+                .short("K")
+                .help("Verify SSL connection"),
         )
         .arg(
             Arg::with_name("valid-codes")
