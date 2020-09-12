@@ -43,12 +43,13 @@ use crate::communication::{
 use crate::scraper::{
     EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
-use log::{info, warn};
+use log::{info, warn, debug};
 use stderrlog;
 
 fn main() {
     let args = Args::parse_args();
     init_log(args.verbosity);
+    debug!("{:?}", args);
 
     let http_options: HttpOptions = args.clone().into();
     let verificator = gen_verificator(
@@ -121,7 +122,8 @@ fn read_paths(paths: Vec<String>) -> Vec<String> {
     return resolved_paths;
 }
 
-/// Read urls from string or file
+/// Read urls from string, file or stdin if nothing else
+/// is specified.
 fn read_urls(urls: Vec<String>) -> Vec<Url> {
     let mut base_urls = Vec::new();
 
@@ -133,8 +135,7 @@ fn read_urls(urls: Vec<String>) -> Vec<Url> {
                 }
             }
             Err(_) => {
-                warn!("[X] {} is not a valid URL", url_str);
-                std::process::exit(-1);
+                warn!("Invalid URL: '{}'", url_str);
             }
         }
     }

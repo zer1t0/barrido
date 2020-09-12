@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 /// Class used to store the arguments provided by the user.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Args {
     pub threads: usize,
     pub urls: Vec<String>,
@@ -254,7 +254,7 @@ impl Into<HttpOptions> for Args {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CodesVerification {
     ValidCodes(Vec<u16>),
     InvalidCodes(Vec<u16>),
@@ -273,7 +273,7 @@ impl Into<Verificator> for CodesVerification {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum RangeSizeVerification {
     MatchSize(Vec<(usize, usize)>),
     FilterSize(Vec<(usize, usize)>),
