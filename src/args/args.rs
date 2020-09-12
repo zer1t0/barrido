@@ -20,7 +20,7 @@ pub enum RangeSizeVerification {
 
 /// Class used to store the arguments provided by the user.
 #[derive(Clone)]
-pub struct Arguments {
+pub struct Args {
     pub threads: usize,
     pub urls: String,
     pub wordlist: String,
@@ -44,14 +44,14 @@ pub struct Arguments {
     pub verbosity: usize,
 }
 
-impl Arguments {
+impl Args {
     pub fn parse_args() -> Self {
         let arg_matches = args().get_matches();
         return ArgumentsParser::new(arg_matches).parse_args();
     }
 }
 
-impl Into<HttpOptions> for Arguments {
+impl Into<HttpOptions> for Args {
     fn into(self) -> HttpOptions {
         return HttpOptions::new(
             self.check_ssl,

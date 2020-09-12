@@ -1,4 +1,4 @@
-use super::arguments::{Arguments, CodesVerification, RangeSizeVerification};
+use super::args::{Args, CodesVerification, RangeSizeVerification};
 use clap::{ArgMatches, Values};
 use regex::Regex;
 use reqwest::Proxy;
@@ -15,10 +15,10 @@ impl<'a> ArgumentsParser<'a> {
         return Self { matches };
     }
 
-    pub fn parse_args(&self) -> Arguments {
+    pub fn parse_args(&self) -> Args {
         let threads: usize = self.value_of("threads").unwrap().parse().unwrap();
 
-        return Arguments {
+        return Args {
             threads: threads,
             urls: self.value_of("url").unwrap().to_string(),
             wordlist: self.wordlist(),

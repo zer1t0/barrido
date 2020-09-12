@@ -1,5 +1,5 @@
 mod actors;
-mod arguments;
+mod args;
 mod communication;
 mod http;
 mod printer;
@@ -27,7 +27,7 @@ use reqwest::Url;
 use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
-use arguments::{Arguments, CodesVerification, RangeSizeVerification};
+use args::{Args, CodesVerification, RangeSizeVerification};
 
 use crossbeam_channel::Receiver;
 use std::sync::Arc;
@@ -50,7 +50,7 @@ use log::{info, warn};
 use stderrlog;
 
 fn main() {
-    let args = Arguments::parse_args();
+    let args = Args::parse_args();
     init_log(args.verbosity);
 
     let http_options: HttpOptions = args.clone().into();
