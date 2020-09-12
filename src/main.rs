@@ -19,7 +19,7 @@ use crossbeam_channel;
 use crate::http::HttpOptions;
 use crate::verificator::{
     BodyRegexVerificator, CodesVerificator, HeaderRegexVerificator,
-    OrVerificator, SizeVerificator, TrueVerificator, Verificator,
+    OrVerificator, SizeVerificator, Verificator,
 };
 
 use printer::Printer;
