@@ -61,7 +61,7 @@ fn main() {
         args.size_range_verification,
     );
 
-    let paths: Vec<String> = read_paths(vec![args.wordlist]);
+    let paths: Vec<String> = read_paths(vec![args.wordlist], &args.path_suffix);
     let base_urls = read_urls(args.urls);
 
     let max_requests_count = paths.len() * base_urls.len();
@@ -113,13 +113,14 @@ fn init_log(verbosity: usize) {
 
 /// Function to read the paths or file of paths given.
 /// It returns a vector of non duplicate paths.
-fn read_paths(paths: Vec<String>) -> Vec<String> {
+fn read_paths(paths: Vec<String>, suffix: &str) -> Vec<String> {
     // to keep paths order
     let mut resolved_paths = Vec::new();
 
     // to increase check speed and remove duplicates in large wordlists
     let mut paths_set = HashSet::new();
-    for path in readin::read_inputs(paths, false, false) {
+    for mut path in readin::read_inputs(paths, false, false) {
+        path = format!("{}{}", path, suffix);
         if !paths_set.contains(&path) {
             resolved_paths.push(path.clone());
             paths_set.insert(path);

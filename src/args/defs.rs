@@ -21,6 +21,12 @@ pub fn args() -> App<'static, 'static> {
                 .help("File with paths"),
         )
         .arg(
+            Arg::with_name("suffix")
+                .long("suffix")
+                .help("Set a suffix to append to paths.")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("threads")
                 .long("threads")
                 .short("t")
