@@ -2,6 +2,7 @@ use super::defs::args;
 use crate::http::HttpOptions;
 use crate::verificator::{
     CodesVerificator, OrVerificator, SizeVerificator, Verificator,
+    BodyRegexVerificator,
 };
 use clap::ArgMatches;
 use regex::Regex;
@@ -20,7 +21,7 @@ pub struct Args {
     pub check_ssl: bool,
     pub expand_path: bool,
     pub codes_verification: CodesVerification,
-    pub regex_verification: Option<Regex>,
+    pub body_regex_verification: Option<BodyRegexVerification>,
     pub valid_header_regex_verification: Option<(Regex, Regex)>,
     pub size_range_verification: Option<RangeSizeVerification>,
     pub user_agent: String,
@@ -51,7 +52,7 @@ impl Args {
             check_ssl: matches.is_present("check-ssl"),
             expand_path: matches.is_present("expand-path"),
             codes_verification: codes_verification(&matches),
-            regex_verification: regex_verification(&matches),
+            body_regex_verification: body_regex_verification(&matches),
             valid_header_regex_verification: valid_header_regex(&matches),
             size_range_verification: range_sizes_verification(&matches),
             user_agent: matches.value_of("user-agent").unwrap().to_string(),
@@ -176,11 +177,21 @@ fn parse_range_sizes(
     return None;
 }
 
-fn regex_verification(matches: &ArgMatches) -> Option<Regex> {
+fn body_regex_verification(matches: &ArgMatches) -> Option<BodyRegexVerification> {
     if matches.is_present("filter-body") {
         return Some(
-            Regex::new(matches.value_of("filter-body").unwrap())
-                .expect("Error parsing filter-body"),
+            BodyRegexVerification::InvalidRegex(
+                Regex::new(matches.value_of("filter-body").unwrap())
+                    .expect("Error parsing filter-body")
+            )
+        );
+    }
+    else if matches.is_present("match-body"){
+        return Some(
+            BodyRegexVerification::ValidRegex(
+                Regex::new(matches.value_of("match-body").unwrap())
+                    .expect("Error parsing filter-body")
+            )
         );
     }
     return None;
@@ -294,6 +305,26 @@ impl Into<Verificator> for RangeSizeVerification {
                     .map(|r| SizeVerificator::new_range(r.0, r.1))
                     .collect(),
             ),
+        }
+    }
+}
+
+
+#[derive(Clone, Debug)]
+pub enum BodyRegexVerification {
+    ValidRegex(Regex),
+    InvalidRegex(Regex),
+}
+
+impl Into<Verificator> for BodyRegexVerification {
+    fn into(self) -> Verificator {
+        match self {
+            BodyRegexVerification::ValidRegex(re) => {
+                BodyRegexVerificator::new(re)
+            }
+            BodyRegexVerification::InvalidRegex(re) => {
+                !BodyRegexVerificator::new(re)
+            }
         }
     }
 }

@@ -139,10 +139,17 @@ pub fn args() -> App<'static, 'static> {
                 .conflicts_with("match-codes"),
         )
         .arg(
+            Arg::with_name("match-body")
+                .long("match-body")
+                .help("Regex to match responses for body content.")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("filter-body")
                 .long("filter-body")
                 .help("Regex to filter responses for body content.")
-                .takes_value(true),
+                .takes_value(true)
+                .conflicts_with("match-body"),
         )
         .arg(
             Arg::with_name("match-header")

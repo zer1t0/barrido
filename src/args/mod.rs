@@ -1,4 +1,6 @@
 mod args;
 mod defs;
 
-pub use args::{Args, CodesVerification, RangeSizeVerification};
+pub use args::{
+    Args, BodyRegexVerification, CodesVerification, RangeSizeVerification,
+};

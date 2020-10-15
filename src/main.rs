@@ -16,7 +16,7 @@ use crossbeam_channel;
 
 use crate::http::HttpOptions;
 use crate::verificator::{
-    BodyRegexVerificator, HeaderRegexVerificator, Verificator,
+    HeaderRegexVerificator, Verificator,
 };
 
 use std::collections::HashSet;
@@ -26,7 +26,9 @@ use reqwest::Url;
 use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
-use args::{Args, CodesVerification, RangeSizeVerification};
+use args::{
+    Args, BodyRegexVerification, CodesVerification, RangeSizeVerification,
+};
 
 use crossbeam_channel::Receiver;
 use std::sync::Arc;
@@ -45,7 +47,7 @@ use crate::communication::{
 use crate::scraper::{
     EmptyScraperProvider, ScraperProvider, UrlsScraperProvider,
 };
-use log::{info, warn, debug};
+use log::{debug, info, warn};
 use stderrlog;
 
 fn main() {
@@ -56,7 +58,7 @@ fn main() {
     let http_options: HttpOptions = args.clone().into();
     let verificator = gen_verificator(
         args.codes_verification,
-        args.regex_verification,
+        args.body_regex_verification,
         args.valid_header_regex_verification,
         args.size_range_verification,
     );
@@ -112,13 +114,13 @@ fn init_log(verbosity: usize) {
 }
 
 /// Function to read the paths or file of paths given.
-/// It returns a vector of non duplicate paths. 
+/// It returns a vector of non duplicate paths.
 fn read_paths(paths: Vec<String>) -> Vec<String> {
     // to keep paths order
     let mut resolved_paths = Vec::new();
 
     // to increase check speed and remove duplicates in large wordlists
-    let mut paths_set = HashSet::new(); 
+    let mut paths_set = HashSet::new();
     for path in readin::read_inputs(paths, false, false) {
         if !paths_set.contains(&path) {
             resolved_paths.push(path.clone());
@@ -150,20 +152,20 @@ fn read_urls(urls: Vec<String>) -> Vec<Url> {
 
 fn gen_verificator(
     codes_verification: CodesVerification,
-    valid_body_regex_verification: Option<Regex>,
+    body_regex_verification: Option<BodyRegexVerification>,
     valid_header_regex_verification: Option<(Regex, Regex)>,
     range_size_verification: Option<RangeSizeVerification>,
 ) -> Verificator {
     let codes_verificator: Verificator = codes_verification.into();
-    let valid_body_verificator =
-        valid_body_regex_verification.map(|r| !BodyRegexVerificator::new(r));
+    let body_verificator =
+        body_regex_verification.map(|brv| brv.into());
     let valid_header_verificator = valid_header_regex_verification
         .map(|hr| HeaderRegexVerificator::new(hr.0, hr.1));
     let sizes_verificator: Option<Verificator> =
         range_size_verification.map(|rs| rs.into());
 
     return codes_verificator
-        & valid_body_verificator
+        & body_verificator
         & valid_header_verificator
         & sizes_verificator;
 }
