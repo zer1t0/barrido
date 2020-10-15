@@ -1,6 +1,6 @@
 [package]
 name = "barrido"
-version = "0.3.1"
+version = "0.3.2"
 description = "Tool to discover paths in web applications"
 authors = ["Eloy zer1t0ps@protonmail.com"]
 edition = "2018"
