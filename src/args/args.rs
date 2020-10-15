@@ -201,7 +201,7 @@ fn urls(matches: &ArgMatches) -> Vec<String> {
 }
 
 fn valid_header_regex(matches: &ArgMatches) -> Option<(Regex, Regex)> {
-    let value = matches.value_of("valid-header")?;
+    let value = matches.value_of("match-header")?;
 
     let mut parts: Vec<&str> = value.split(":").collect();
 

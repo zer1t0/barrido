@@ -49,36 +49,7 @@ pub fn args() -> App<'static, 'static> {
                 .long("secure")
                 .short("K")
                 .help("Verify SSL connection"),
-        )
-        .arg(
-            Arg::with_name("valid-codes")
-                .long("valid-codes")
-                .help("Response codes which are valid")
-                .takes_value(true)
-                .use_delimiter(true)
-                .default_value("200,204,301,302,307,401,403"),
-        )
-        .arg(
-            Arg::with_name("invalid-codes")
-                .long("invalid-codes")
-                .help("Response codes which are invalid")
-                .takes_value(true)
-                .use_delimiter(true)
-                .conflicts_with("valid-codes"),
-        )
-        .arg(
-            Arg::with_name("invalid-regex")
-                .long("invalid-regex")
-                .help("Regex to match invalid responses")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("valid-header")
-                .long("valid-header")
-                .help("Regex to match headers. In form .*:.* to match header name and value")
-                .takes_value(true)
-                .validator(is_header_regex),
-        )        
+        )       
         .arg(
             Arg::with_name("user-agent")
                 .long("user-agent")
@@ -151,6 +122,35 @@ pub fn args() -> App<'static, 'static> {
                 .multiple(true)
                 .help("Verbosity"),
         )
+        .arg(
+            Arg::with_name("valid-codes")
+                .long("valid-codes")
+                .help("Response codes which are valid")
+                .takes_value(true)
+                .use_delimiter(true)
+                .default_value("200,204,301,302,307,401,403"),
+        )
+        .arg(
+            Arg::with_name("invalid-codes")
+                .long("invalid-codes")
+                .help("Response codes which are invalid")
+                .takes_value(true)
+                .use_delimiter(true)
+                .conflicts_with("valid-codes"),
+        )
+        .arg(
+            Arg::with_name("invalid-regex")
+                .long("invalid-regex")
+                .help("Regex to match invalid responses")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("match-header")
+                .long("match-header")
+                .help("Regex to match headers. In form .*:.* to match header name and value")
+                .takes_value(true)
+                .validator(is_header_regex),
+        ) 
         .arg(
             Arg::with_name("match-size")
                 .long("match-size")
