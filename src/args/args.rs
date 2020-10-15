@@ -88,10 +88,10 @@ fn headers(matches: &ArgMatches) -> HashMap<String, String> {
 
 fn codes_verification(matches: &ArgMatches) -> CodesVerification {
     let codes_verification: CodesVerification;
-    if matches.is_present("invalid-codes") {
+    if matches.is_present("filter-codes") {
         let mut code_list: Vec<u16> = Vec::new();
 
-        for code in matches.values_of("invalid-codes").unwrap() {
+        for code in matches.values_of("filter-codes").unwrap() {
             code_list.push(
                 code.parse()
                     .expect(format!("Invalid code {}", code).as_str()),
@@ -102,7 +102,7 @@ fn codes_verification(matches: &ArgMatches) -> CodesVerification {
     } else {
         let mut code_list: Vec<u16> = Vec::new();
 
-        for code in matches.values_of("valid-codes").unwrap() {
+        for code in matches.values_of("match-codes").unwrap() {
             code_list.push(
                 code.parse()
                     .expect(format!("Invalid code {}", code).as_str()),

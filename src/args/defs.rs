@@ -123,20 +123,20 @@ pub fn args() -> App<'static, 'static> {
                 .help("Verbosity"),
         )
         .arg(
-            Arg::with_name("valid-codes")
-                .long("valid-codes")
-                .help("Response codes which are valid")
+            Arg::with_name("match-codes")
+                .long("match-codes")
+                .help("Response codes which are valid.")
                 .takes_value(true)
                 .use_delimiter(true)
                 .default_value("200,204,301,302,307,401,403"),
         )
         .arg(
-            Arg::with_name("invalid-codes")
-                .long("invalid-codes")
-                .help("Response codes which are invalid")
+            Arg::with_name("filter-codes")
+                .long("filter-codes")
+                .help("Response codes which are invalid.")
                 .takes_value(true)
                 .use_delimiter(true)
-                .conflicts_with("valid-codes"),
+                .conflicts_with("match-codes"),
         )
         .arg(
             Arg::with_name("filter-body")
