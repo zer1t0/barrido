@@ -66,7 +66,9 @@ impl UrlAggregator {
     }
 
     fn send_path(&mut self, base_url: &Url, path: &str) {
-        self.send_url(base_url, base_url.join(path).unwrap());
+        let mut url = base_url.clone();
+        url.set_path(&format!("{}{}", url.path(), path));
+        self.send_url(base_url, url);
     }
 
     fn send_urls(&mut self, urls_message: UrlsMessage) {
