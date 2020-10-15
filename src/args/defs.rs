@@ -141,23 +141,31 @@ pub fn args() -> App<'static, 'static> {
         .arg(
             Arg::with_name("match-body")
                 .long("match-body")
-                .help("Regex to match responses for body content.")
+                .help("Regex to match responses by body content.")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("filter-body")
                 .long("filter-body")
-                .help("Regex to filter responses for body content.")
+                .help("Regex to filter responses by body content.")
                 .takes_value(true)
                 .conflicts_with("match-body"),
         )
         .arg(
             Arg::with_name("match-header")
                 .long("match-header")
-                .help("Regex to match headers. In form .*:.* to match header name and value")
+                .help("Regex to match by headers. In form .*:.* to match header:value")
                 .takes_value(true)
                 .validator(is_header_regex),
-        ) 
+        )
+        .arg(
+            Arg::with_name("filter-header")
+                .long("filter-header")
+                .help("Regex to filter by headers. In form .*:.* to match header:value")
+                .takes_value(true)
+                .validator(is_header_regex)
+                .conflicts_with("match-header"),
+        )
         .arg(
             Arg::with_name("match-size")
                 .long("match-size")

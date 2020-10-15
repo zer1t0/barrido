@@ -10,14 +10,11 @@ mod scraper;
 mod verificator;
 
 use ctrlc;
-use regex::Regex;
 
 use crossbeam_channel;
 
 use crate::http::HttpOptions;
-use crate::verificator::{
-    HeaderRegexVerificator, Verificator,
-};
+use crate::verificator::{Verificator};
 
 use std::collections::HashSet;
 
@@ -27,7 +24,8 @@ use result_handler::ResultHandler;
 use result_saver::JsonResultSaver;
 
 use args::{
-    Args, BodyRegexVerification, CodesVerification, RangeSizeVerification,
+    Args, BodyRegexVerification, CodesVerification, HeaderRegexVerification,
+    RangeSizeVerification,
 };
 
 use crossbeam_channel::Receiver;
@@ -59,7 +57,7 @@ fn main() {
     let verificator = gen_verificator(
         args.codes_verification,
         args.body_regex_verification,
-        args.valid_header_regex_verification,
+        args.header_regex_verification,
         args.size_range_verification,
     );
 
@@ -153,20 +151,18 @@ fn read_urls(urls: Vec<String>) -> Vec<Url> {
 fn gen_verificator(
     codes_verification: CodesVerification,
     body_regex_verification: Option<BodyRegexVerification>,
-    valid_header_regex_verification: Option<(Regex, Regex)>,
+    header_regex_verification: Option<HeaderRegexVerification>,
     range_size_verification: Option<RangeSizeVerification>,
 ) -> Verificator {
     let codes_verificator: Verificator = codes_verification.into();
-    let body_verificator =
-        body_regex_verification.map(|brv| brv.into());
-    let valid_header_verificator = valid_header_regex_verification
-        .map(|hr| HeaderRegexVerificator::new(hr.0, hr.1));
+    let body_verificator = body_regex_verification.map(|brv| brv.into());
+    let header_verificator = header_regex_verification.map(|hr| hr.into());
     let sizes_verificator: Option<Verificator> =
         range_size_verification.map(|rs| rs.into());
 
     return codes_verificator
         & body_verificator
-        & valid_header_verificator
+        & header_verificator
         & sizes_verificator;
 }
 

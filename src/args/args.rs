@@ -1,8 +1,8 @@
 use super::defs::args;
 use crate::http::HttpOptions;
 use crate::verificator::{
-    CodesVerificator, OrVerificator, SizeVerificator, Verificator,
-    BodyRegexVerificator,
+    BodyRegexVerificator, CodesVerificator, HeaderRegexVerificator,
+    OrVerificator, SizeVerificator, Verificator,
 };
 use clap::ArgMatches;
 use regex::Regex;
@@ -22,7 +22,7 @@ pub struct Args {
     pub expand_path: bool,
     pub codes_verification: CodesVerification,
     pub body_regex_verification: Option<BodyRegexVerification>,
-    pub valid_header_regex_verification: Option<(Regex, Regex)>,
+    pub header_regex_verification: Option<HeaderRegexVerification>,
     pub size_range_verification: Option<RangeSizeVerification>,
     pub user_agent: String,
     pub show_status: bool,
@@ -53,7 +53,7 @@ impl Args {
             expand_path: matches.is_present("expand-path"),
             codes_verification: codes_verification(&matches),
             body_regex_verification: body_regex_verification(&matches),
-            valid_header_regex_verification: valid_header_regex(&matches),
+            header_regex_verification: header_regex(&matches),
             size_range_verification: range_sizes_verification(&matches),
             user_agent: matches.value_of("user-agent").unwrap().to_string(),
             show_status: matches.is_present("status"),
@@ -177,22 +177,19 @@ fn parse_range_sizes(
     return None;
 }
 
-fn body_regex_verification(matches: &ArgMatches) -> Option<BodyRegexVerification> {
+fn body_regex_verification(
+    matches: &ArgMatches,
+) -> Option<BodyRegexVerification> {
     if matches.is_present("filter-body") {
-        return Some(
-            BodyRegexVerification::InvalidRegex(
-                Regex::new(matches.value_of("filter-body").unwrap())
-                    .expect("Error parsing filter-body")
-            )
-        );
-    }
-    else if matches.is_present("match-body"){
-        return Some(
-            BodyRegexVerification::ValidRegex(
-                Regex::new(matches.value_of("match-body").unwrap())
-                    .expect("Error parsing filter-body")
-            )
-        );
+        return Some(BodyRegexVerification::InvalidRegex(
+            Regex::new(matches.value_of("filter-body").unwrap())
+                .expect("Error parsing filter-body"),
+        ));
+    } else if matches.is_present("match-body") {
+        return Some(BodyRegexVerification::ValidRegex(
+            Regex::new(matches.value_of("match-body").unwrap())
+                .expect("Error parsing filter-body"),
+        ));
     }
     return None;
 }
@@ -207,20 +204,33 @@ fn timeout(matches: &ArgMatches) -> Duration {
 fn urls(matches: &ArgMatches) -> Vec<String> {
     match matches.values_of("url") {
         None => Vec::new(),
-        Some(urls) => urls.map(|u| u.to_string()).collect()
+        Some(urls) => urls.map(|u| u.to_string()).collect(),
     }
 }
 
-fn valid_header_regex(matches: &ArgMatches) -> Option<(Regex, Regex)> {
-    let value = matches.value_of("match-header")?;
+fn header_regex(matches: &ArgMatches) -> Option<HeaderRegexVerification> {
+    if let Some(value) = matches.value_of("match-header") {
+        let (name_regex, value_regex) = gen_header_regex(value);
+        return Some(HeaderRegexVerification::ValidRegex(
+            name_regex,
+            value_regex,
+        ));
+    } else if let Some(value) = matches.value_of("filter-header") {
+        let (name_regex, value_regex) = gen_header_regex(value);
+        return Some(HeaderRegexVerification::InvalidRegex(
+            name_regex,
+            value_regex,
+        ));
+    }
 
+    return None;
+}
+
+fn gen_header_regex(value: &str) -> (Regex, Regex) {
     let mut parts: Vec<&str> = value.split(":").collect();
 
     if parts.len() == 1 {
-        return Some((
-            new_insensitive_regex(parts[0]),
-            Regex::new(".*").unwrap(),
-        ));
+        return (new_insensitive_regex(parts[0]), Regex::new(".*").unwrap());
     }
 
     let name = parts.remove(0);
@@ -237,7 +247,7 @@ fn valid_header_regex(matches: &ArgMatches) -> Option<(Regex, Regex)> {
         Regex::new(&value).unwrap()
     };
 
-    return Some((name_regex, value_regex));
+    return (name_regex, value_regex);
 }
 
 fn wordlist(matches: &ArgMatches) -> String {
@@ -263,7 +273,6 @@ impl Into<HttpOptions> for Args {
         );
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub enum CodesVerification {
@@ -309,7 +318,6 @@ impl Into<Verificator> for RangeSizeVerification {
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub enum BodyRegexVerification {
     ValidRegex(Regex),
@@ -324,6 +332,25 @@ impl Into<Verificator> for BodyRegexVerification {
             }
             BodyRegexVerification::InvalidRegex(re) => {
                 !BodyRegexVerificator::new(re)
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum HeaderRegexVerification {
+    ValidRegex(Regex, Regex),
+    InvalidRegex(Regex, Regex),
+}
+
+impl Into<Verificator> for HeaderRegexVerification {
+    fn into(self) -> Verificator {
+        match self {
+            HeaderRegexVerification::ValidRegex(re1, re2) => {
+                HeaderRegexVerificator::new(re1, re2)
+            }
+            HeaderRegexVerification::InvalidRegex(re1, re2) => {
+                !HeaderRegexVerificator::new(re1, re2)
             }
         }
     }
