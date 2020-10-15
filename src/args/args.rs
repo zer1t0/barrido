@@ -177,10 +177,10 @@ fn parse_range_sizes(
 }
 
 fn regex_verification(matches: &ArgMatches) -> Option<Regex> {
-    if matches.is_present("invalid-regex") {
+    if matches.is_present("filter-body") {
         return Some(
-            Regex::new(matches.value_of("invalid-regex").unwrap())
-                .expect("Error parsing invalid-regex"),
+            Regex::new(matches.value_of("filter-body").unwrap())
+                .expect("Error parsing filter-body"),
         );
     }
     return None;

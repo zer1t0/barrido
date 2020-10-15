@@ -139,9 +139,9 @@ pub fn args() -> App<'static, 'static> {
                 .conflicts_with("valid-codes"),
         )
         .arg(
-            Arg::with_name("invalid-regex")
-                .long("invalid-regex")
-                .help("Regex to match invalid responses")
+            Arg::with_name("filter-body")
+                .long("filter-body")
+                .help("Regex to filter responses for body content.")
                 .takes_value(true),
         )
         .arg(
